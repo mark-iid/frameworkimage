@@ -1,0 +1,6 @@
+# bootc-image-builder customizations — VM TESTING ONLY (never baked into the image).
+# Gives the qcow2 a loginable account so the greeter/niri session can be exercised.
+[[customizations.user]]
+name = "test"
+password = "test"
+groups = ["wheel"]

@@ -4,3 +4,6 @@ cosign.private
 *.iso
 *.iso-CHECKSUM
 /.bluebuild-scripts_*
+
+# VM test artifacts (large disk images)
+/vm/output/
