@@ -11,12 +11,17 @@ description: Framework 13 AMD, niri, minimal
 base-image: quay.io/fedora-ostree-desktops/sway-atomic
 image-version: 44
 
-# Trivial first image (DESIGN §9 task 1): prove the toolchain builds and boots.
-# The real modules (codecs, niri, greetd, ...) are layered on in later tasks.
+# Building up per DESIGN §9. Done: files, codecs (proven to depsolve on F44).
+# Still to layer in: niri/greetd/waybar session, hardware+userland packages,
+# flatpaks, scripts, systemd units.
 modules:
   - type: files
     files:
       - source: system
         destination: /
+
+  # Codecs: RPM Fusion + ffmpeg swap + freeworld VA driver. Most fragile module;
+  # kept in common/codecs.yml and smoke-tested in isolation via codec-test.yml.
+  - from-file: common/codecs.yml
 
   - type: signing

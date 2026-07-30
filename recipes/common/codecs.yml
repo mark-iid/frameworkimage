@@ -1,0 +1,29 @@
+---
+# Shared codec module: RPM Fusion + full ffmpeg swap + freeworld VA-API drivers.
+# Included by both recipe.yml (the real image) and codec-test.yml (the isolated
+# depsolve smoke test) via `from-file:`, so there is one source of truth for the
+# most fragile part of the build (DESIGN §7 — "expect this to be what breaks on a
+# version bump").
+#
+# Design notes / hard-won facts (Fedora 44, 2026-07):
+#   * Uses a single `install: {allow-erasing: true}` transaction, NOT the dnf
+#     module's `replace:` block. `replace:` runs each old->new pair as its own
+#     `dnf swap --allowerasing` transaction; sequenced that way the mesa swap
+#     rips out ffmpeg-libs/gtk4/mesa-libGL that the ffmpeg swap just placed. One
+#     install transaction lets the solver see every conflict at once and do a
+#     surgical 9-package swap.
+#   * The rpmfusion packages Conflict with the base's split -free ffmpeg libs and
+#     with mesa-va-drivers, so --allowerasing removes the base set and installs
+#     the rpmfusion set together.
+#   * rpmfusion fc44 has NO mesa-vdpau-drivers-freeworld (VDPAU is the legacy
+#     NVIDIA path). Only mesa-va-drivers-freeworld / mesa-vulkan-drivers-freeworld
+#     exist. VA-API is what matters on this AMD APU.
+modules:
+  - type: dnf
+    repos:
+      nonfree: rpmfusion
+    install:
+      allow-erasing: true
+      packages:
+        - ffmpeg
+        - mesa-va-drivers-freeworld
