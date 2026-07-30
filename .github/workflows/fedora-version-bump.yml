@@ -20,7 +20,7 @@ jobs:
     name: Check for a newer Fedora release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install skopeo
         run: sudo apt-get update && sudo apt-get install -y skopeo
@@ -64,7 +64,7 @@ jobs:
 
       - name: Open PR
         if: steps.detect.outputs.should_bump == 'true'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: fedora-bump-${{ steps.detect.outputs.latest }}
           delete-branch: true
