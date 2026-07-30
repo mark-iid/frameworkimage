@@ -26,7 +26,11 @@ podman run --rm --privileged --security-opt label=disable \
   -v "$PWD/vm/biib-config.toml":/config.toml:ro \
   -v /var/lib/containers/storage:/var/lib/containers/storage \
   "$BIIB" \
-  build --type qcow2 --local "$IMAGE"
+  build --type qcow2 --rootfs xfs "$IMAGE"
+  # --rootfs is REQUIRED: the Fedora sway-atomic base is an ostree image and does
+  # not declare a DefaultRootFs, so biib errors "missing required info:
+  # DefaultRootFs" without it. xfs is only for this test disk; the real install
+  # (DESIGN §10) uses btrfs subvols on LUKS, set up at install time, not here.
 
 echo ">>> Done. Artifact:"
 find vm/output -name '*.qcow2' -exec ls -lh {} \;
