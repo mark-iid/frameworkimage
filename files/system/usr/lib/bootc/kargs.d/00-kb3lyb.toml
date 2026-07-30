@@ -1,0 +1,17 @@
+# kb3lyb-sway kernel arguments (DESIGN §1).
+#
+# amdgpu.dcdebugmask=0x10 — disables PSR on this AMD APU, working around a
+#   display-engine hang. Hardware issue, definitely still needed. Harmless in a
+#   VM (no amdgpu), so it's safe to carry in the image.
+#
+# plymouth.enable=0 loglevel=3 — text boot, no Plymouth splash. rhgb/quiet are
+#   simply not added (the base doesn't force them here).
+#
+# NOT reapplied: the systemd-remount-fs.service mask (DESIGN §1 says verify on a
+#   fresh install first, do not blindly carry it over).
+
+kargs = [
+    "amdgpu.dcdebugmask=0x10",
+    "plymouth.enable=0",
+    "loglevel=3",
+]

@@ -1,0 +1,11 @@
+# kb3lyb-sway greeter (DESIGN §2: greetd + tuigreet).
+# tuigreet launches a niri session. `niri --session` runs niri as a proper
+# session (imports environment, brings up the graphical-session systemd target),
+# which is what makes pipewire/portals/user services come up correctly.
+
+[terminal]
+vt = 1
+
+[default_session]
+command = "tuigreet --time --remember --remember-session --asterisks --cmd 'niri --session'"
+user = "greetd"

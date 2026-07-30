@@ -11,9 +11,9 @@ description: Framework 13 AMD, niri, minimal
 base-image: quay.io/fedora-ostree-desktops/sway-atomic
 image-version: 44
 
-# Building up per DESIGN §9. Done: files, codecs (proven to depsolve on F44).
-# Still to layer in: niri/greetd/waybar session, hardware+userland packages,
-# flatpaks, scripts, systemd units.
+# Building up per DESIGN §9. Done: files, codecs (proven to depsolve on F44),
+# niri/greetd/waybar session (§9.3). Still to layer in: the rest of the
+# hardware+userland packages (§9.5), scripts, more systemd units.
 modules:
   - type: files
     files:
@@ -23,5 +23,64 @@ modules:
   # Codecs: RPM Fusion + ffmpeg swap + freeworld VA driver. Most fragile module;
   # kept in common/codecs.yml and smoke-tested in isolation via codec-test.yml.
   - from-file: common/codecs.yml
+
+  # Session stack (DESIGN §9.3). All in Fedora 44 repos (verified). Baked config
+  # for these lives under files/system/etc (niri, waybar, mako, foot, greetd).
+  - type: dnf
+    install:
+      packages:
+        # compositor + XWayland
+        - niri
+        - xwayland-satellite
+        # greeter
+        - greetd
+        - tuigreet
+        # bar / notifications / launcher
+        - waybar
+        - mako
+        - fuzzel
+        # screenshot / clipboard / screen lock / display profiles
+        - grim
+        - slurp
+        - wl-clipboard      # niri config uses wl-paste/wl-copy for cliphist
+        - cliphist
+        - gtklock
+        - kanshi
+        # interim terminal (ghostty layered later from a vetted COPR)
+        - foot
+        # polkit agent — base ships none; niri needs one for auth prompts.
+        # polkit-gnome is retired in F44; mate-polkit is the lightweight GTK agent
+        # (ships /usr/libexec/polkit-mate-authentication-agent-1).
+        - mate-polkit
+        # session niceties
+        - brightnessctl
+        - playerctl
+        - blueman
+        - network-manager-applet
+
+  # GUI apps as flatpaks (DESIGN §8.5: prefer $HOME/flatpak over layering/overrides).
+  # bitwarden + nextcloud added here per operator request — both are clean flatpak
+  # fits (bitwarden is Electron-only; nextcloud avoids the override ledger).
+  # NOTE: Electron flatpaks (bitwarden/slack/discord) still need a Wayland/Ozone
+  # override for sharp HiDPI (DESIGN §4) — handled in a later scripts pass (§9.5).
+  # Bazaar (the app store) is deferred: not in Fedora, flatpak ID unverified (§7).
+  - type: default-flatpaks
+    configurations:
+      - notify: true
+        scope: system
+        install:
+          - org.mozilla.firefox
+          - io.github.ungoogled_software.ungoogled_chromium
+          - com.bitwarden.desktop
+          - com.nextcloud.desktopclient.nextcloud
+      - scope: user
+
+  # Switch the display manager from the base's SDDM to greetd (DESIGN §2).
+  - type: systemd
+    system:
+      enabled:
+        - greetd.service
+      disabled:
+        - sddm.service
 
   - type: signing
