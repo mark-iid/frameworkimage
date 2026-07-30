@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
+# image will be published to ghcr.io/<user>/kb3lyb-sway
+name: kb3lyb-sway
+description: Framework 13 AMD, niri, minimal
+
+# Fedora Sway Atomic. Note: the old "sericea" codename repo is gone; the image
+# now lives at fedora-ostree-desktops/sway-atomic. Pinned explicitly per DESIGN §5;
+# never point at a floating tag. Currently matches the Fedora 44 the machine runs
+# today. Bumped by an automated PR (see §5), never floating.
+base-image: quay.io/fedora-ostree-desktops/sway-atomic
+image-version: 44
+
+# Trivial first image (DESIGN §9 task 1): prove the toolchain builds and boots.
+# The real modules (codecs, niri, greetd, ...) are layered on in later tasks.
+modules:
+  - type: files
+    files:
+      - source: system
+        destination: /
+
+  - type: signing
