@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Local edit-compile-test loop for kb3lyb-sway (DESIGN §8.2: iterate locally, not
+# via GitHub Actions). Generates a Containerfile with the BlueBuild CLI container,
+# then builds it with host rootless podman.
+#
+# Why generate + podman build (not `bluebuild build`): the CLI's build driver
+# expects to drive buildah/podman itself, which is awkward to nest under rootless
+# podman on this Aurora host. Generating the Containerfile and building it directly
+# keeps everything in the host's rootless podman storage.
+#
+# Why --security-opt label=disable: without it, podman execs the module scripts off
+# a read-only bind mount and SELinux denies it ("Permission denied", exit 126).
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+RECIPE="${1:-recipes/recipe.yml}"
+TAG="${TAG:-kb3lyb-sway:44}"
+REGISTRY="${REGISTRY:-ghcr.io}"
+NAMESPACE="${NAMESPACE:-kb3lyb}"
+
+echo ">>> Generating Containerfile from ${RECIPE}"
+podman run --rm -v "$PWD":/build:Z -w /build ghcr.io/blue-build/cli:latest \
+  bluebuild generate --registry "$REGISTRY" --registry-namespace "$NAMESPACE" \
+  -o Containerfile "$RECIPE"
+
+echo ">>> Building ${TAG}"
+podman build --security-opt label=disable -f Containerfile -t "$TAG" .
+
+echo ">>> Built ${TAG}"
+podman images "${TAG%:*}"
