@@ -64,7 +64,7 @@ jobs:
 
       - name: Open PR
         if: steps.detect.outputs.should_bump == 'true'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: fedora-bump-${{ steps.detect.outputs.latest }}
           delete-branch: true
