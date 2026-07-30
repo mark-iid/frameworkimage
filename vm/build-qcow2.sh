@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Build a bootable qcow2 from the locally-built kb3lyb-sway image (DESIGN §9.4).
+#
+# WHY THIS NEEDS ROOT: bootc-image-builder refuses to run under rootless podman
+# ("this command must be run in rootful podman") — creating a partitioned,
+# SELinux-labeled bootable disk needs loop devices and privileged mounts. QEMU
+# boot afterwards does NOT need root (see boot-check.sh), only this build step.
+#
+# Run it with:   ! sudo bash vm/build-qcow2.sh
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+ARCHIVE="vm/kb3lyb-sway.oci"
+IMAGE="localhost/kb3lyb-sway:44"
+BIIB="quay.io/centos-bootc/bootc-image-builder:latest"
+
+echo ">>> Loading ${IMAGE} into ROOT podman storage from ${ARCHIVE}"
+# oci-archive carries the ref; load makes it available to rootful podman.
+podman load -i "$ARCHIVE"
+podman image exists "$IMAGE" || { echo "!! ${IMAGE} not in root storage after load"; podman images; exit 1; }
+
+echo ">>> Building qcow2 with bootc-image-builder"
+mkdir -p vm/output
+podman run --rm --privileged --security-opt label=disable \
+  -v "$PWD/vm/output":/output \
+  -v "$PWD/vm/biib-config.toml":/config.toml:ro \
+  -v /var/lib/containers/storage:/var/lib/containers/storage \
+  "$BIIB" \
+  build --type qcow2 --local "$IMAGE"
+
+echo ">>> Done. Artifact:"
+find vm/output -name '*.qcow2' -exec ls -lh {} \;
+# Make the qcow2 readable/writable by the invoking (non-root) user for QEMU boot.
+if [ -n "${SUDO_UID:-}" ]; then
+  chown -R "${SUDO_UID}:${SUDO_GID:-$SUDO_UID}" vm/output
+  echo ">>> chowned vm/output back to uid ${SUDO_UID}"
+fi
