@@ -107,15 +107,26 @@ modules:
     scripts:
       - authselect-fingerprint.sh
 
-  # Display manager: base SDDM -> greetd. Plus tailscaled (§2).
+  # Display manager: base SDDM -> greetd. Plus tailscaled (§2) and the auto-update
+  # timers (§5). Unit files for the flatpak/brew timers live in files/systemd/.
   # fprintd is NOT enabled here: it's D-Bus-activated (no [Install] section), so
   # enabling would error; PAM starts it on demand once with-fingerprint is set.
+  #
+  # Update strategy (§5): rpm-ostreed-automatic stages OS updates (policy=stage in
+  # /etc/rpm-ostreed.conf), flatpak-update.timer refreshes SYSTEM flatpaks (system,
+  # not user — a user flatpak update would hit polkit and stall), and the per-user
+  # brew-upgrade.timer keeps $HOME brew current. Together these replace Aurora's uupd.
   - type: systemd
     system:
       enabled:
         - greetd.service
         - tailscaled.service
+        - rpm-ostreed-automatic.timer
+        - flatpak-update.timer
       disabled:
         - sddm.service
+    user:
+      enabled:
+        - brew-upgrade.timer
 
   - type: signing

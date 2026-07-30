@@ -1,0 +1,12 @@
+[Unit]
+Description=Update system flatpaks
+Wants=network-online.target
+After=network-online.target
+# Don't fight the first-boot flatpak install (default-flatpaks module).
+After=flatpak-system-update.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/flatpak update --system --noninteractive --assumeyes
+# A failed update (e.g. offline) shouldn't spam failures; the timer retries.
+SuccessExitStatus=0 1
