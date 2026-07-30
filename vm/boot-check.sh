@@ -40,18 +40,23 @@ fi
 rm -f "$QMP"
 
 echo ">>> Booting $QCOW (KVM, VNC 127.0.0.1:590${VNC_DISPLAY}, ssh localhost:${SSH_PORT})"
+# virtio-vga-gl + egl-headless give the guest a virgl 3D render node, which
+# niri's wlroots renderer requires. Plain -vga virtio (2D only) makes niri exit
+# immediately with no renderer. Serial is a unix socket (ttyS0) so we can log in
+# over it for diagnosis (serial-getty@ttyS0 runs in the guest).
+rm -f vm/serial.sock
 qemu-system-x86_64 \
   -machine q35,accel=kvm -cpu host -m 4096 -smp 4 \
   -drive file="$QCOW",if=virtio,format=qcow2 \
-  -vga virtio -display none -vnc 127.0.0.1:${VNC_DISPLAY} \
+  -device virtio-vga-gl -display egl-headless -vnc 127.0.0.1:${VNC_DISPLAY} \
   -netdev user,id=n0,hostfwd=tcp::${SSH_PORT}-:22 -device virtio-net,netdev=n0 \
   -device virtio-rng-pci \
   -qmp unix:"$QMP",server,nowait \
-  -serial file:vm/output/serial.log \
+  -serial unix:vm/serial.sock,server,nowait \
   -pidfile "$PIDF" -daemonize
 
-echo ">>> QEMU pid $(cat "$PIDF"). Waiting 90s for boot to the greeter..."
-sleep 90
+echo ">>> QEMU pid $(cat "$PIDF"). Waiting 75s for boot + niri session..."
+sleep 75
 
 echo ">>> Capturing framebuffer screenshot -> $SHOT"
 qmp "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$PWD/$SHOT\"}}"

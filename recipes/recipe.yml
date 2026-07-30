@@ -11,9 +11,9 @@ description: Framework 13 AMD, niri, minimal
 base-image: quay.io/fedora-ostree-desktops/sway-atomic
 image-version: 44
 
-# Building up per DESIGN §9. Done: files, codecs (proven to depsolve on F44),
-# niri/greetd/waybar session (§9.3). Still to layer in: the rest of the
-# hardware+userland packages (§9.5), scripts, more systemd units.
+# Building up per DESIGN §9. Done: files, codecs, niri/greetd session (§9.3),
+# hardware+userland+VS Code layer (§9.5). $HOME installers (brew/SDKMAN/JetBrains)
+# are NOT baked (DESIGN §2) — they come via the dotfiles bootstrap in §9.6.
 modules:
   - type: files
     files:
@@ -58,12 +58,35 @@ modules:
         - blueman
         - network-manager-applet
 
+  # Hardware + userland + VS Code (DESIGN §9.5). Only VS Code needs an external
+  # repo — tailscale, VPN, rclone, fprintd are all in Fedora now, keeping the
+  # external-repo surface (the thing that breaks on version bumps, §1) minimal.
+  # NOT added: power-profiles-daemon — the base ships tuned-ppd, which provides
+  # the same PPD D-Bus API and would conflict.
+  - type: dnf
+    repos:
+      keys:
+        - https://packages.microsoft.com/keys/microsoft.asc
+      files:
+        - vscode.repo   # -> files/dnf/vscode.repo
+    install:
+      packages:
+        - code                              # VS Code (MS repo), layered per §2
+        - tailscale                         # now in Fedora; no external repo
+        - wireguard-tools
+        - openconnect                       # Cisco AnyConnect via openconnect (§2)
+        - NetworkManager-openconnect-gnome
+        - rclone
+        - fuse3                             # rclone FUSE mounts (§1)
+        - fprintd
+        - fprintd-pam                       # fingerprint; enabled via authselect below
+        - stow                              # dotfiles deploy (DESIGN §6/§9.6)
+
   # GUI apps as flatpaks (DESIGN §8.5: prefer $HOME/flatpak over layering/overrides).
-  # bitwarden + nextcloud added here per operator request — both are clean flatpak
-  # fits (bitwarden is Electron-only; nextcloud avoids the override ledger).
-  # NOTE: Electron flatpaks (bitwarden/slack/discord) still need a Wayland/Ozone
-  # override for sharp HiDPI (DESIGN §4) — handled in a later scripts pass (§9.5).
-  # Bazaar (the app store) is deferred: not in Fedora, flatpak ID unverified (§7).
+  # Electron apps (slack/discord/bitwarden) are forced onto native Wayland for
+  # sharp HiDPI via seeded flatpak overrides — see files/.../factory + the
+  # tmpfiles.d C rules (DESIGN §4). Bazaar (app store) still deferred: not in
+  # Fedora, flatpak ID unverified (§7).
   - type: default-flatpaks
     configurations:
       - notify: true
@@ -73,13 +96,25 @@ modules:
           - io.github.ungoogled_software.ungoogled_chromium
           - com.bitwarden.desktop
           - com.nextcloud.desktopclient.nextcloud
+          - com.slack.Slack
+          - com.discordapp.Discord
+          - org.libreoffice.LibreOffice
+          - com.valvesoftware.Steam
       - scope: user
 
-  # Switch the display manager from the base's SDDM to greetd (DESIGN §2).
+  # Enable fingerprint auth via authselect (DESIGN §2/§7).
+  - type: script
+    scripts:
+      - authselect-fingerprint.sh
+
+  # Display manager: base SDDM -> greetd. Plus tailscaled (§2).
+  # fprintd is NOT enabled here: it's D-Bus-activated (no [Install] section), so
+  # enabling would error; PAM starts it on demand once with-fingerprint is set.
   - type: systemd
     system:
       enabled:
         - greetd.service
+        - tailscaled.service
       disabled:
         - sddm.service
 

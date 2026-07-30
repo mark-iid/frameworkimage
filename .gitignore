@@ -5,5 +5,12 @@ cosign.private
 *.iso-CHECKSUM
 /.bluebuild-scripts_*
 
-# VM test artifacts (large disk images)
+# VM test artifacts (large disk images / exported archives / runtime junk)
 /vm/output/
+/vm/*.oci
+/vm/*.pid
+/vm/*.sock
+*.oci
+*.qcow2
+*.tar
+*.tar.gz
