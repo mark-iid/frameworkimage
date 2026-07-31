@@ -144,6 +144,15 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
 - [ ] Recreate `/var/mnt/data`: `/etc/crypttab` entry + mount unit (capture these
       *before* wiping, don't reconstruct from memory).
 - [ ] Evolution: use the **Microsoft 365 / Graph** account type, not EWS (§3).
+- [ ] *(optional)* **Show the text boot instead of the Plymouth splash.** The base
+      image's cmdline carries `rhgb quiet`. To see the console/systemd boot messages:
+      ```
+      sudo rpm-ostree kargs --delete=rhgb --delete=quiet   # drop just rhgb to keep kernel quiet
+      systemctl reboot
+      ```
+      This is a *local* karg change (persists across `rpm-ostree upgrade`, but not baked
+      — bootc `kargs.d` only appends, it can't remove the base `rhgb quiet`), so redo it
+      after a fresh reinstall.
 
 ---
 
