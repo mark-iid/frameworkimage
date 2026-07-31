@@ -58,6 +58,24 @@ modules:
         - blueman
         - network-manager-applet
 
+  # Clipboard persistence. wlroots/niri drop the active selection when the source
+  # window closes, so copying a URL from a short-lived dialog (e.g. the Nextcloud
+  # login prompt) and then pasting into Firefox yields nothing. wl-clip-persist
+  # keeps the last selection alive so paste works. wl-clipboard/cliphist (above)
+  # cover copy + history but NOT live persistence. Unlike those, wl-clip-persist is
+  # NOT in the Fedora repos — only a COPR — so this is a deliberate, documented
+  # exception to the minimize-external-repos rule (§1), scoped to this one package.
+  # Autostarted from the niri config (dotfiles): wl-clip-persist --clipboard both.
+  - type: dnf
+    repos:
+      copr:
+        - leloubil/wl-clip-persist
+    install:
+      packages:
+        - repo: copr:copr.fedorainfracloud.org:leloubil:wl-clip-persist
+          packages:
+            - wl-clip-persist
+
   # Icon font for the desktop UI. waybar (and its style.css) render status glyphs
   # from Nerd Fonts' Material Design Icon set — battery/network/volume/backlight.
   # With no icon font installed they all fall back to tofu placeholders (□). This
