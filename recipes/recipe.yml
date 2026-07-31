@@ -94,6 +94,8 @@ modules:
         - fprintd
         - fprintd-pam                       # fingerprint; enabled via authselect below
         - stow                              # dotfiles deploy (DESIGN §6/§9.6)
+        - zsh                               # login shell the dotfiles/.zshrc target (§6);
+                                            # kb3lyb-bootstrap ends by telling you to open zsh
 
   # GUI apps as flatpaks (DESIGN §8.5: prefer $HOME/flatpak over layering/overrides).
   # Electron apps (slack/discord/bitwarden) are forced onto native Wayland for
