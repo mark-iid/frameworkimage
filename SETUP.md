@@ -125,6 +125,18 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
 - [ ] `kb3lyb-bootstrap` — clones dotfiles (prompts for a token), stows them, installs
       brew + Brewfile, SDKMAN, JetBrains Toolbox into `$HOME` (§6).
 - [ ] `fprintd-enroll` — re-enroll fingerprints (not portable, §10).
+- [ ] **Make the login keyring passwordless** (needed once fingerprint login is set
+      up). `pam_fprintd` is `sufficient` and first in `system-auth`, so a fingerprint
+      login never captures a password — and `pam_gnome_keyring` then can't unlock the
+      login keyring. Symptom: VS Code "keychain"/Secret Service errors, Evolution can't
+      store its OAuth token, `secret-tool` fails. Fix (leans on LUKS FDE for at-rest
+      protection): open **Seahorse** (Passwords and Keys) → right-click the **Login**
+      keyring → **Change Password** → old = your login password, new = **blank** →
+      accept "Use Unsafe Storage". It then auto-unlocks at every login regardless of
+      how you authenticate. Verify: `busctl --user get-property org.freedesktop.secrets
+      /org/freedesktop/secrets/collection/login org.freedesktop.Secret.Collection
+      Locked` → `b false`. (Alternative: log in with your password instead of the
+      finger — the keyring then unlocks the normal way, no blank password needed.)
 - [ ] `sudo tailscale up` — re-authenticate the node (identity isn't portable, §10).
 - [ ] Restore by hand, encrypted (never via repo/image, §10): `~/.ssh`, `~/.gnupg`,
       `~/.config/rclone/rclone.conf`, the atuin key (`~/.local/share/atuin/key`), then
