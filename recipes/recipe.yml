@@ -58,6 +58,19 @@ modules:
         - blueman
         - network-manager-applet
 
+  # Icon font for the desktop UI. waybar (and its style.css) render status glyphs
+  # from Nerd Fonts' Material Design Icon set — battery/network/volume/backlight.
+  # With no icon font installed they all fall back to tofu placeholders (□). This
+  # installs "Symbols Nerd Font" — exactly the family style.css asks for. Done via
+  # the BlueBuild fonts module (fetched from the upstream Nerd Fonts release), not
+  # a font RPM: the symbols-only Nerd Font isn't in the Fedora repos (only the
+  # third-party Terra repo / a COPR), and pulling it here keeps the external-repo
+  # surface minimal (§1).
+  - type: fonts
+    fonts:
+      nerd-fonts:
+        - NerdFontsSymbolsOnly
+
   # Hardware + userland + VS Code (DESIGN §9.5). Only VS Code needs an external
   # repo — tailscale, VPN, rclone, fprintd are all in Fedora now, keeping the
   # external-repo surface (the thing that breaks on version bumps, §1) minimal.
