@@ -64,12 +64,17 @@ layout {
     }
 }
 
-// Startup: bar, notifications, polkit agent, clipboard history, XWayland.
+// Startup: bar, notifications, polkit agent, clipboard history, XWayland, and the
+// network/bluetooth tray applets. waybar's tray module stays empty without an SNI
+// provider running; `nm-applet --indicator` uses the StatusNotifierItem path that
+// waybar understands (plain `nm-applet` would try the dead XEmbed tray instead).
 spawn-at-startup "xwayland-satellite"
 spawn-at-startup "waybar"
 spawn-at-startup "mako"
 spawn-at-startup "/usr/libexec/polkit-mate-authentication-agent-1"
 spawn-at-startup "sh" "-c" "wl-paste --watch cliphist store"
+spawn-at-startup "nm-applet" "--indicator"
+spawn-at-startup "blueman-applet"
 
 cursor {
     xcursor-size 24
