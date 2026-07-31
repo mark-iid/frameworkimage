@@ -2,10 +2,16 @@
 # tuigreet launches a niri session. `niri --session` runs niri as a proper
 # session (imports environment, brings up the graphical-session systemd target),
 # which is what makes pipewire/portals/user services come up correctly.
+#
+# --theme: Norton Utilities palette (blue panel, light-cyan borders, light-yellow
+# highlights, white text) to match the KB3LYB / markearnest.net presentation style.
+# The theme string was validated to parse by tuigreet before baking. LOGIN-CRITICAL:
+# a bad greetd command breaks login — verify on the machine after upgrading, and
+# roll back to the previous deployment from the boot menu if it ever fails.
 
 [terminal]
 vt = 1
 
 [default_session]
-command = "tuigreet --time --remember --remember-session --asterisks --cmd 'niri --session'"
+command = "tuigreet --theme 'container=blue;border=lightcyan;title=lightcyan;greet=lightyellow;text=white;time=lightcyan;prompt=lightyellow;input=white;action=lightcyan;button=lightyellow' --greeting 'KB3LYB' --window-padding 2 --time --remember --remember-session --asterisks --cmd 'niri --session'"
 user = "greetd"
