@@ -388,6 +388,20 @@ the `dmsquash-live` module. There is also an open upstream request for a plain
 `iso` target that boots the container image directly, CoreOS-style, but that is
 distinct from `anaconda-iso` and not something to depend on.
 
+**Critical: `anaconda-iso` is UNATTENDED by default and will silently wipe a
+disk.** With no kickstart, `bootc-image-builder --type anaconda-iso` emits an
+installer that installs to the *first disk it finds* — no prompt, no target
+selection, no encryption. This is not hypothetical: a build that trusted an
+earlier (wrong) claim of interactivity overwrote a live machine's internal NVMe
+this exact way. `vm/build-iso.sh` therefore mounts `vm/iso-config.toml`, whose
+empty `[customizations.installer.kickstart]` forces Anaconda to run interactively
+(bootc-image-builder still injects the `ostreecontainer` line that installs the
+image; an empty kickstart adds *no* `autopart`/`clearpart`/`reboot`, so it stops
+at the hub and waits). The build script refuses to run if that config is missing.
+**Never build this ISO without it, and never add autopart/clearpart/reboot to it.**
+If in any doubt, use the stock-Fedora-plus-rebase fallback above — Fedora's own
+Anaconda is interactive and trusted, and never runs unattended.
+
 ### Hardware validation before wiping (do this, not a live CD)
 
 A VM cannot test the things most likely to fail on this specific machine: the

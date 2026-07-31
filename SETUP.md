@@ -86,6 +86,15 @@ This is an **Anaconda installer**, not a live desktop (§10). Booting it install
 image onto a target disk; first boot of the installed system is the final niri desktop.
 Partitioning, LUKS, btrfs, and your user account are chosen interactively.
 
+> ⚠️ **`anaconda-iso` is UNATTENDED by default — it silently wipes the first disk
+> it finds, no prompt, no encryption** (it already destroyed one machine's internal
+> NVMe). `build-iso.sh` only stays interactive because it mounts `vm/iso-config.toml`
+> (an empty installer kickstart, §10). **Never delete that file or add
+> `autopart`/`clearpart`/`reboot` to it** — the script refuses to build without it.
+> When in doubt, prefer the §5 fallback: install stock Fedora Sway Atomic and
+> `rpm-ostree rebase` (README). Fedora's Anaconda is interactive and never
+> auto-installs.
+
 ---
 
 ## 5. Installing (§9.9 / §10)
