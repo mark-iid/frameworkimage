@@ -63,9 +63,11 @@ modules:
   # window closes, so copying a URL from a short-lived dialog (e.g. the Nextcloud
   # login prompt) and then pasting into Firefox yields nothing. wl-clip-persist
   # keeps the last selection alive so paste works. wl-clipboard/cliphist (above)
-  # cover copy + history but NOT live persistence. Unlike those, wl-clip-persist is
-  # NOT in the Fedora repos — only a COPR — so this is a deliberate, documented
-  # exception to the minimize-external-repos rule (§1), scoped to this one package.
+  # cover copy + history but NOT live persistence. Only in a COPR (not Fedora), so
+  # a deliberate, documented exception to the minimize-external-repos rule (§1).
+  # Installed as a PLAIN package (not the scoped `repo: copr:…` form) so any deps
+  # resolve from Fedora too — same reason as ghostty below. It has no external deps
+  # today, but the plain form keeps it from breaking the build if it ever gains one.
   # Autostarted from the niri config (dotfiles): wl-clip-persist --clipboard both.
   - type: dnf
     repos:
@@ -73,16 +75,14 @@ modules:
         - leloubil/wl-clip-persist
     install:
       packages:
-        - repo: copr:copr.fedorainfracloud.org:leloubil:wl-clip-persist
-          packages:
-            - wl-clip-persist
+        - wl-clip-persist
 
   # ghostty — primary terminal (DESIGN §2), replacing the foot interim. GTK4 +
   # Wayland-native, so it honors the 1.35 fractional scale directly (no dpi-aware
   # dance like foot needed). Not in Fedora repos yet; scottames/ghostty is the COPR
   # ghostty's own install docs endorse — the vetted source the DESIGN §3 note was
-  # waiting on (its `pgdev/ghostty` guess never existed). Another scoped §1
-  # external-repo exception. Config + the Super+Return binding live in dotfiles.
+  # waiting on (its `pgdev/ghostty` guess never existed). Another §1 external-repo
+  # exception. Config + the Super+Return binding live in dotfiles.
   - type: dnf
     repos:
       copr:
@@ -93,7 +93,7 @@ modules:
       # the COPR. The scoped form restricts resolution to the COPR only, so the
       # build fails with "nothing provides zlib-ng". Enabling the COPR (above) and
       # listing ghostty plainly lets deps resolve from Fedora + the COPR together.
-      # (wl-clip-persist can use the scoped form because it has no external deps.)
+      # (wl-clip-persist above uses the plain form too, for the same reason.)
       packages:
         - ghostty
 
@@ -153,8 +153,8 @@ modules:
   # GUI apps as flatpaks (DESIGN §8.5: prefer $HOME/flatpak over layering/overrides).
   # Electron apps (slack/discord/bitwarden) are forced onto native Wayland for
   # sharp HiDPI via seeded flatpak overrides — see files/.../factory + the
-  # tmpfiles.d C rules (DESIGN §4). Bazaar (app store) still deferred: not in
-  # Fedora, flatpak ID unverified (§7).
+  # tmpfiles.d C rules (DESIGN §4). Bazaar is the app store (no GNOME Software on
+  # this minimal image); flatpak ID verified as io.github.kolunmi.Bazaar on Flathub.
   - type: default-flatpaks
     configurations:
       - notify: true
@@ -168,6 +168,7 @@ modules:
           - com.discordapp.Discord
           - org.libreoffice.LibreOffice
           - com.valvesoftware.Steam
+          - io.github.kolunmi.Bazaar   # app store (Flathub)
       - scope: user
 
   # Enable fingerprint auth via authselect (DESIGN §2/§7).
