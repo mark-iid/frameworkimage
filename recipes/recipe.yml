@@ -46,7 +46,8 @@ modules:
         - cliphist
         - gtklock
         - kanshi
-        # interim terminal (ghostty layered later from a vetted COPR)
+        # fallback terminal. ghostty (below) is the primary terminal now; foot
+        # stays as a tiny, dependency-light backup that always launches.
         - foot
         # polkit agent — base ships none; niri needs one for auth prompts.
         # polkit-gnome is retired in F44; mate-polkit is the lightweight GTK agent
@@ -75,6 +76,22 @@ modules:
         - repo: copr:copr.fedorainfracloud.org:leloubil:wl-clip-persist
           packages:
             - wl-clip-persist
+
+  # ghostty — primary terminal (DESIGN §2), replacing the foot interim. GTK4 +
+  # Wayland-native, so it honors the 1.35 fractional scale directly (no dpi-aware
+  # dance like foot needed). Not in Fedora repos yet; scottames/ghostty is the COPR
+  # ghostty's own install docs endorse — the vetted source the DESIGN §3 note was
+  # waiting on (its `pgdev/ghostty` guess never existed). Another scoped §1
+  # external-repo exception. Config + the Super+Return binding live in dotfiles.
+  - type: dnf
+    repos:
+      copr:
+        - scottames/ghostty
+    install:
+      packages:
+        - repo: copr:copr.fedorainfracloud.org:scottames:ghostty
+          packages:
+            - ghostty
 
   # Icon font for the desktop UI. waybar (and its style.css) render status glyphs
   # from Nerd Fonts' Material Design Icon set — battery/network/volume/backlight.

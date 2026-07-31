@@ -187,8 +187,9 @@ Protect the backup itself:
 - **Host auto-update timers (§5):** `rpm-ostreed-automatic.timer` (staging) and user
   timers for `flatpak update -y` + `brew upgrade` are **not yet in the image**. Aurora's
   `uupd` handled all three; their absence will be noticed on day two.
-- **Ghostty terminal (§2):** deferred — `foot` is the interim terminal. `pgdev/ghostty`
-  (the §3 guess) doesn't exist; a community COPR needs vetting.
+- ~~**Ghostty terminal (§2):**~~ **done** — baked from the `scottames/ghostty` COPR
+  (the source ghostty's own install docs endorse; the §3 `pgdev/ghostty` guess never
+  existed). It's the primary terminal (`Super+Return`); `foot` stays as a fallback.
 - **Bazaar app store (§7):** deferred — not in Fedora, flatpak ID unverified.
 - **HDMI presenting (§2):** a `kanshi` profile for the external output is still needed.
 - **Electron Wayland overrides (§4):** seeded via tmpfiles; verify they take effect
