@@ -3,15 +3,17 @@
 # to re-run. Baked into the image (this is the one piece that can't live in the
 # dotfiles repo, since it's what clones the dotfiles repo).
 #
-#   1. clone the private dotfiles repo over HTTPS (git prompts for a token)
+#   1. clone the public dotfiles repo over HTTPS (anonymous — no token needed)
 #   2. stow every package into $HOME
 #   3. install $HOME tooling: Homebrew, its Brewfile, SDKMAN, JetBrains Toolbox
 #
-# Nothing here needs root. Secrets are never baked (DESIGN §6): the clone
-# authenticates interactively.
+# Nothing here needs root, and nothing is secret: the dotfiles repo is public
+# (secrets never live in it — see its .gitignore), so the clone is anonymous. On
+# GitHub for availability during disaster recovery (a self-hosted git could be the
+# very thing you're recovering). Override DOTFILES_REPO to use a fork/mirror.
 set -uo pipefail
 
-DOTFILES_REPO="${DOTFILES_REPO:-https://git.mystikos.org/mark/dot-files.git}"
+DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/mark-iid/dotfiles.git}"
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 say()  { printf '\033[1;34m>>> %s\033[0m\n' "$*"; }
@@ -22,8 +24,8 @@ if [[ -d "$DOTFILES_DIR/.git" ]]; then
   say "dotfiles present, pulling latest"
   git -C "$DOTFILES_DIR" pull --ff-only || warn "git pull failed; continuing with local copy"
 else
-  say "cloning dotfiles from $DOTFILES_REPO (git will prompt for credentials)"
-  git clone "$DOTFILES_REPO" "$DOTFILES_DIR" || { warn "clone failed — fix auth and re-run"; exit 1; }
+  say "cloning dotfiles from $DOTFILES_REPO (public — no auth needed)"
+  git clone "$DOTFILES_REPO" "$DOTFILES_DIR" || { warn "clone failed — check network and re-run"; exit 1; }
 fi
 
 # --- 2. stow -------------------------------------------------------------------
