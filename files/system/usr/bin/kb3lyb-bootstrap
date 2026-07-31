@@ -74,26 +74,25 @@ if [[ ! -s "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
   curl -fsSL "https://get.sdkman.io?rcupdate=false" | bash || warn "SDKMAN install failed"
 fi
 
-# JetBrains Toolbox (self-updating, in $HOME — DESIGN §2). First run installs it
-# to ~/.local/share/JetBrains/Toolbox and adds launchers.
-if [[ ! -d "$HOME/.local/share/JetBrains/Toolbox" ]]; then
+# JetBrains Toolbox (self-updating, in $HOME — DESIGN §2). Since 3.x it ships as a
+# BUNDLE (bin/jetbrains-toolbox + bin/lib/), not a single binary, and the binary
+# sits at bin/ inside a versioned top dir. So extract the whole tree to a stable
+# path (strip the top dir) and run it from there — copying just the binary, or
+# `find -maxdepth 2`, silently failed on 3.x and left Toolbox uninstalled.
+TBX_HOME="$HOME/.local/share/JetBrains/Toolbox-app"
+if [[ ! -x "$TBX_HOME/bin/jetbrains-toolbox" ]]; then
   say "installing JetBrains Toolbox"
   tmp="$(mktemp -d)"
   if curl -fsSL "https://data.services.jetbrains.com/products/download?platform=linux&code=TBA" -o "$tmp/toolbox.tar.gz"; then
-    tar -xzf "$tmp/toolbox.tar.gz" -C "$tmp"
-    tbx="$(find "$tmp" -maxdepth 2 -name jetbrains-toolbox -type f | head -1)"
-    if [[ -n "$tbx" ]]; then
-      # Stage the bootstrapper into ~/.local/bin FIRST, then launch it from there.
-      # The old code ran it straight out of $tmp and then `rm -rf`'d $tmp right
-      # away, deleting the binary mid-self-install — so Toolbox never installed.
-      # Copying to a stable, on-PATH location makes the cleanup below safe and
-      # leaves a working launcher behind. setsid fully detaches it from this shell.
+    mkdir -p "$TBX_HOME"
+    tar -xzf "$tmp/toolbox.tar.gz" -C "$TBX_HOME" --strip-components=1
+    if [[ -x "$TBX_HOME/bin/jetbrains-toolbox" ]]; then
       mkdir -p "$HOME/.local/bin"
-      install -m755 "$tbx" "$HOME/.local/bin/jetbrains-toolbox"
-      setsid "$HOME/.local/bin/jetbrains-toolbox" >/dev/null 2>&1 </dev/null &
+      ln -sf "$TBX_HOME/bin/jetbrains-toolbox" "$HOME/.local/bin/jetbrains-toolbox"
+      setsid "$TBX_HOME/bin/jetbrains-toolbox" >/dev/null 2>&1 </dev/null &
       say "JetBrains Toolbox launched; complete sign-in from its window (Super+D → JetBrains Toolbox)."
     else
-      warn "JetBrains Toolbox binary not found in the downloaded archive"
+      warn "JetBrains Toolbox binary not found after extract"
     fi
   else
     warn "JetBrains Toolbox download failed"
