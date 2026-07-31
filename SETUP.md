@@ -231,6 +231,15 @@ Done since the first cut (kept for history):
 - **Electron Wayland overrides (§4):** confirmed on the real install — Slack renders
   sharp and dark.
 - **Mail:** Evolution + evolution-ews baked (M365/Graph + personal; mako notifications).
+- **Portal FileChooser fix (open/save dialogs):** the stock niri portal config
+  (`/usr/share/xdg-desktop-portal/niri-portals.conf`) has `default=gnome;gtk`, routing
+  the FileChooser to xdg-desktop-portal-**gnome**. Under niri there's no GNOME session, so
+  its delegation fails (`The name is not activatable`) and the *calling* app hangs on a
+  file dialog that never appears (hit with Nextcloud's "Choose a different folder"). Baked
+  `/etc/xdg-desktop-portal/niri-portals.conf` prefers **gtk** (implements FileChooser +
+  all UI portals; works on wlroots), keeps screencast/screenshot on wlr and secrets on
+  gnome-keyring; dark mode still flows via the gtk Settings portal. A live per-user copy
+  in `~/.config/xdg-desktop-portal/` applies the same fix before the image lands.
 - **Speaker DSP (EasyEffects):** `cab404/framework-dsp` presets are installed to
   `~/.var/app/com.github.wwmm.easyeffects/config/easyeffects/{output,irs}` (the three
   output presets + the convolver impulse-responses; `%CFG%` in each preset is rewritten
