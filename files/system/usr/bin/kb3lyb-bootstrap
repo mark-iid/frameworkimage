@@ -100,6 +100,48 @@ if [[ ! -x "$TBX_HOME/bin/jetbrains-toolbox" ]]; then
   rm -rf "$tmp"
 fi
 
+# Discord (native, in $HOME — deliberately NOT the flatpak). The flatpak's zypak
+# sandbox breaks the Wayland splash->main-window handoff under niri: the client
+# downloads and loads the web app but the main window never maps (you get a stuck
+# "Discord Updater / Starting" splash). The official tarball is a tiny bootstrap;
+# on first GUI launch its updater_bootstrap fetches the real client into
+# ~/.config/discord and execs it directly on host Wayland/GPU, self-updating after.
+DISCORD_DIR="$HOME/.local/share/Discord"
+if [[ ! -x "$DISCORD_DIR/discord" ]]; then
+  say "installing Discord (native tarball, in \$HOME)"
+  tmp="$(mktemp -d)"
+  if curl -fsSL "https://discord.com/api/download?platform=linux&format=tar.gz" -o "$tmp/discord.tar.gz"; then
+    mkdir -p "$HOME/.local/share"
+    tar -xzf "$tmp/discord.tar.gz" -C "$HOME/.local/share"   # tarball top dir is "Discord"
+    if [[ -x "$DISCORD_DIR/discord" ]]; then
+      mkdir -p "$HOME/.local/bin" "$HOME/.local/share/applications" \
+               "$HOME/.local/share/icons/hicolor/256x256/apps"
+      ln -sf "$DISCORD_DIR/discord" "$HOME/.local/bin/discord"
+      cp -f "$DISCORD_DIR/discord.png" "$HOME/.local/share/icons/hicolor/256x256/apps/discord.png"
+      cat > "$HOME/.local/share/applications/discord.desktop" <<EOF
+[Desktop Entry]
+Name=Discord
+GenericName=Internet Messenger
+Comment=All-in-one voice and text chat
+Exec=$DISCORD_DIR/discord --url -- %u
+Icon=discord
+Type=Application
+Categories=Network;InstantMessaging;
+MimeType=x-scheme-handler/discord;
+StartupWMClass=discord
+Terminal=false
+EOF
+      update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+      say "Discord installed; launch from fuzzel (Super+D -> Discord) — first run downloads the client."
+    else
+      warn "Discord launcher not found after extract"
+    fi
+  else
+    warn "Discord download failed"
+  fi
+  rm -rf "$tmp"
+fi
+
 # --- 4. login shell ------------------------------------------------------------
 # The dotfiles target zsh (.zshrc). Make it the login shell so a fresh user lands
 # in zsh — and thus brew + plugins — without a manual chsh. `sudo chsh` lets root

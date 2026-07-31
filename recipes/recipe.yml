@@ -151,10 +151,13 @@ modules:
         - evolution-ews
 
   # GUI apps as flatpaks (DESIGN §8.5: prefer $HOME/flatpak over layering/overrides).
-  # Electron apps (slack/discord/bitwarden) are forced onto native Wayland for
-  # sharp HiDPI via seeded flatpak overrides — see files/.../factory + the
-  # tmpfiles.d C rules (DESIGN §4). Bazaar is the app store (no GNOME Software on
-  # this minimal image); flatpak ID verified as io.github.kolunmi.Bazaar on Flathub.
+  # Electron apps (slack/bitwarden) are forced onto native Wayland for sharp HiDPI
+  # via seeded flatpak overrides — see files/.../factory + the tmpfiles.d C rules
+  # (DESIGN §4). Discord is NOT a flatpak: its zypak sandbox breaks the Wayland
+  # splash->main-window handoff under niri (the client loads but never maps a
+  # window), so it's installed natively into $HOME by kb3lyb-bootstrap instead.
+  # Bazaar is the app store (no GNOME Software on this minimal image); flatpak ID
+  # verified as io.github.kolunmi.Bazaar on Flathub.
   - type: default-flatpaks
     configurations:
       - notify: true
@@ -165,7 +168,6 @@ modules:
           - com.bitwarden.desktop
           - com.nextcloud.desktopclient.nextcloud
           - com.slack.Slack
-          - com.discordapp.Discord
           - org.libreoffice.LibreOffice
           - com.valvesoftware.Steam
           - io.github.kolunmi.Bazaar   # app store (Flathub)

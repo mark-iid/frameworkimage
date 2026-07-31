@@ -123,7 +123,7 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
 ## 6. First-boot / post-install
 
 - [ ] `kb3lyb-bootstrap` — clones dotfiles (prompts for a token), stows them, installs
-      brew + Brewfile, SDKMAN, JetBrains Toolbox into `$HOME` (§6).
+      brew + Brewfile, SDKMAN, JetBrains Toolbox, and native Discord into `$HOME` (§6).
 - [ ] `fprintd-enroll` — re-enroll fingerprints (not portable, §10).
 - [ ] **Make the login keyring passwordless** (needed once fingerprint login is set
       up). `pam_fprintd` is `sufficient` and first in `system-auth`, so a fingerprint
@@ -230,6 +230,13 @@ Done since the first cut (kept for history):
   one is confirmed working (it staged an image update in normal use).
 - **Electron Wayland overrides (§4):** confirmed on the real install — Slack renders
   sharp and dark.
+- **Discord — native, not flatpak:** the `com.discordapp.Discord` flatpak's zypak
+  sandbox breaks the Wayland splash→main-window handoff under niri (web app loads, main
+  window never maps; stuck "Discord Updater / Starting" splash — the renderer also
+  segfaulted on a corrupt GPU/shader cache). Removed from the recipe + its flatpak
+  override; `kb3lyb-bootstrap` now installs the official tarball into `$HOME`
+  (`~/.local/share/Discord`, self-updating, launches on host Wayland/GPU). Verified: main
+  window maps, zero crashes.
 - **Mail:** Evolution + evolution-ews baked (M365/Graph + personal; mako notifications).
 - **Portal FileChooser fix (open/save dialogs):** the stock niri portal config
   (`/usr/share/xdg-desktop-portal/niri-portals.conf`) has `default=gnome;gtk`, routing
