@@ -198,6 +198,26 @@ take effect on `niri msg action reload-config`, keep it in git.
 Do not bake secrets, tokens, or rclone credentials into the image. The image is
 public.
 
+**Desktop session behavior lives in the dotfiles repo, not here** (per the split
+above): global dark mode (GTK `settings.ini` + `gsettings color-scheme prefer-dark`),
+idle-lock (swayidle → gtklock), the tray applets (nm-applet/blueman), clipboard
+persistence (wl-clip-persist), and a `graphical-session-bind.service`.
+
+That last one is a non-obvious workaround worth recording. greetd launches niri as a
+bare `niri --session`, **not** via `niri.service` — so `graphical-session.target` is
+never activated, and because `xdg-desktop-portal` has
+`Requisite=graphical-session.target`, the portal never starts. A dead portal silently
+breaks the dark-mode `color-scheme` signal (Electron/libadwaita apps), file-chooser
+portals, and screencasting. The dotfiles ship a tiny oneshot user unit that
+`BindsTo`/`Before` `graphical-session.target` (mirroring `niri.service`) and start it
+from niri `spawn-at-startup` to pull the target up. A cleaner fix would be to launch
+niri via `niri.service` from greetd, but that's login-critical and untested — the
+dotfiles workaround is low-risk and reversible.
+
+Note also the fingerprint↔keyring interaction (SETUP §6): fingerprint login never
+captures a password, so `pam_gnome_keyring` can't unlock the login keyring — the
+chosen resolution is a passwordless login keyring (relying on LUKS FDE).
+
 ---
 
 ## 7. Recipe skeleton

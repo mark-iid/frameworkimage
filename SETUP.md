@@ -184,14 +184,22 @@ Protect the backup itself:
 
 ## 9. Not yet baked / known follow-ups
 
-- **Host auto-update timers (§5):** `rpm-ostreed-automatic.timer` (staging) and user
-  timers for `flatpak update -y` + `brew upgrade` are **not yet in the image**. Aurora's
-  `uupd` handled all three; their absence will be noticed on day two.
-- ~~**Ghostty terminal (§2):**~~ **done** — baked from the `scottames/ghostty` COPR
-  (the source ghostty's own install docs endorse; the §3 `pgdev/ghostty` guess never
-  existed). It's the primary terminal (`Super+Return`); `foot` stays as a fallback.
-- **Bazaar app store (§7):** deferred — not in Fedora, flatpak ID unverified.
+Still open:
 - **HDMI presenting (§2):** a `kanshi` profile for the external output is still needed.
-- **Electron Wayland overrides (§4):** seeded via tmpfiles; verify they take effect
-  on a real install (slack/discord/bitwarden render sharp).
+  kanshi is installed; the profile isn't written — it keys on the specific output/EDID,
+  so it's easiest to author with a display plugged in.
 - **`fw-fanctrl` (§3):** explicitly deferred; battery charge limit is set in BIOS.
+
+Done since the first cut (kept for history):
+- **Ghostty terminal (§2):** baked from the `scottames/ghostty` COPR (the source
+  ghostty's own install docs endorse; the §3 `pgdev/ghostty` guess never existed).
+  Installed as a plain package so its `zlib-ng` dep resolves from Fedora (the scoped
+  `repo: copr:…` form broke the build). Primary terminal (`Super+Return`); `foot` stays
+  a fallback.
+- **Bazaar app store (§7):** added — `io.github.kolunmi.Bazaar` (Flathub, ID verified).
+- **Host auto-update timers (§5):** baked + enabled — `rpm-ostreed-automatic.timer`
+  (staging), `flatpak-update.timer`, and the user `brew-upgrade.timer`. The rpm-ostree
+  one is confirmed working (it staged an image update in normal use).
+- **Electron Wayland overrides (§4):** confirmed on the real install — Slack renders
+  sharp and dark.
+- **Mail:** Evolution + evolution-ews baked (M365/Graph + personal; mako notifications).
