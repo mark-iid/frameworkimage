@@ -141,18 +141,37 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
 - [ ] Restore by hand, encrypted (never via repo/image, §10): `~/.ssh`, `~/.gnupg`,
       `~/.config/rclone/rclone.conf`, the atuin key (`~/.local/share/atuin/key`), then
       `atuin login` to resume sync.
-- [ ] Recreate `/var/mnt/data`: `/etc/crypttab` entry + mount unit (capture these
-      *before* wiping, don't reconstruct from memory).
+- [x] Recreate `/var/mnt/data`: LUKS2 (keyfile auto-unlock via `/etc/luks/data.key`)
+      + ext4, `/etc/crypttab` + `/etc/fstab` (both `nofail`). Done 2026-07-31 with
+      `sfdisk`/`cryptsetup` (the image has no `sgdisk`/`parted`). Confirm auto-unlock
+      survives a reboot: `findmnt /var/mnt/data`.
 - [ ] Evolution: use the **Microsoft 365 / Graph** account type, not EWS (§3).
-- [ ] *(optional)* **Show the text boot instead of the Plymouth splash.** The base
-      image's cmdline carries `rhgb quiet`. To see the console/systemd boot messages:
+- [ ] **Adopt the big console font.** The image ships `FONT=latarcyrheb-sun32` (16x32,
+      ~2x the stock size) as its `/etc/vconsole.conf` default, but the installer writes a
+      real `/etc/vconsole.conf` (`eurlatgr`) at install time, so ostree treats it as
+      machine-owned and never overwrites it on upgrade — the big font silently never
+      applies. Adopt the image default once (persists; also lets future upgrades track it):
       ```
-      sudo rpm-ostree kargs --delete=rhgb --delete=quiet   # drop just rhgb to keep kernel quiet
+      sudo cp /usr/etc/vconsole.conf /etc/vconsole.conf   # sun32; the image default
+      sudo setfont -C /dev/tty1 latarcyrheb-sun32         # apply to the greeter VT now
+      ```
+      Still too small on the 200-DPI panel? `solar24x32` is wider (24x32) — swap the name
+      in `/etc/vconsole.conf`.
+- [ ] *(optional)* **Show the text boot instead of the Plymouth splash.** The base
+      image's cmdline carries `rhgb quiet`. Drop **only `rhgb`** — keep `quiet`:
+      ```
+      sudo rpm-ostree kargs --delete=rhgb   # text boot with systemd progress
       systemctl reboot
       ```
-      This is a *local* karg change (persists across `rpm-ostree upgrade`, but not baked
-      — bootc `kargs.d` only appends, it can't remove the base `rhgb quiet`), so redo it
-      after a fresh reinstall.
+      **Do not also delete `quiet`.** Without it the full kernel log firehose prints to the
+      console and overwrites the initramfs LUKS passphrase prompt (looks blank until you
+      start typing) and bleeds over the tuigreet login screen. `quiet` only silences the
+      noisy kernel ring buffer — you still get systemd's `Starting…/Started` unit progress,
+      which is the readable boot. If you already deleted `quiet`, put it back with
+      `sudo rpm-ostree kargs --append-if-missing=quiet`. This is a *local* karg change
+      (persists across `rpm-ostree upgrade`, not baked — bootc `kargs.d` can only append,
+      not remove the base `rhgb quiet`), so redo it after a fresh reinstall. To read the
+      full kernel log after boot instead: `journalctl -b -k`.
 
 ---
 
