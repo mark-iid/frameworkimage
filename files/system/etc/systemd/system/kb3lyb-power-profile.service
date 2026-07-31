@@ -1,0 +1,8 @@
+[Unit]
+Description=Apply power-profiles-daemon profile from AC/battery state
+After=tuned-ppd.service polkit.service
+Wants=tuned-ppd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/kb3lyb-power-profile

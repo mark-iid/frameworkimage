@@ -192,6 +192,9 @@ modules:
         - tailscaled.service
         - rpm-ostreed-automatic.timer
         - flatpak-update.timer
+        - kb3lyb-power-profile.timer   # auto power profile: perf on AC, balanced on
+                                       # battery, power-saver <20% (files/.../usr/bin
+                                       # + udev rule + polkit rule)
       disabled:
         - sddm.service
     user:

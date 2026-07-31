@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# kb3lyb-power-profile — choose the power-profiles-daemon (tuned-ppd) profile from
+# AC/battery state and apply it over D-Bus. Runs as root via the systemd service.
+#
+#   AC connected               -> performance
+#   on battery, capacity >= 20  -> balanced
+#   on battery, capacity <  20  -> power-saver
+#
+# Triggered by udev on power_supply events (instant on plug/unplug) and by a 2-min
+# timer (to catch the 20% threshold while discharging). A polkit rule lets this
+# session-less root service switch profiles (the action is otherwise allow_active).
+set -u
+
+SVC=org.freedesktop.UPower.PowerProfiles
+OBJ=/org/freedesktop/UPower/PowerProfiles
+IFACE=org.freedesktop.UPower.PowerProfiles
+LOW_PCT=20
+
+# on AC if any Mains-type supply reports online (Framework's USB-C charger shows as
+# ACAD/Mains). Ignores the battery's charging state, so a BIOS charge-limit that
+# leaves the battery "Not charging" while plugged in still counts as AC.
+on_ac=0
+for ps in /sys/class/power_supply/*; do
+    [ -r "$ps/type" ] || continue
+    if [ "$(cat "$ps/type")" = "Mains" ] && [ "$(cat "$ps/online" 2>/dev/null || echo 0)" = "1" ]; then
+        on_ac=1
+        break
+    fi
+done
+
+# lowest capacity across battery packs
+cap=100
+for b in /sys/class/power_supply/*/capacity; do
+    [ -r "$b" ] || continue
+    c=$(cat "$b" 2>/dev/null || echo 100)
+    if [ "$c" -lt "$cap" ]; then cap="$c"; fi
+done
+
+if   [ "$on_ac" = 1 ];          then want=performance
+elif [ "$cap" -lt "$LOW_PCT" ]; then want=power-saver
+else                                 want=balanced
+fi
+
+cur=$(busctl --system get-property "$SVC" "$OBJ" "$IFACE" ActiveProfile 2>/dev/null \
+        | awk '{gsub(/"/,"");print $2}')
+
+if [ "$want" != "${cur:-}" ]; then
+    if busctl --system set-property "$SVC" "$OBJ" "$IFACE" ActiveProfile s "$want"; then
+        echo "power-profile: ${cur:-?} -> $want (ac=$on_ac cap=${cap}%)"
+    else
+        echo "power-profile: FAILED to set $want (ac=$on_ac cap=${cap}%)" >&2
+        exit 1
+    fi
+else
+    echo "power-profile: already $want (ac=$on_ac cap=${cap}%)"
+fi

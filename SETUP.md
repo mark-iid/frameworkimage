@@ -203,3 +203,12 @@ Done since the first cut (kept for history):
 - **Electron Wayland overrides (§4):** confirmed on the real install — Slack renders
   sharp and dark.
 - **Mail:** Evolution + evolution-ews baked (M365/Graph + personal; mako notifications).
+- **Automatic power profiles:** niri has no GNOME power panel, so `kb3lyb-power-profile`
+  (script + `.timer` + a `power_supply` udev rule) drives tuned-ppd: **performance on
+  AC, balanced on battery, power-saver below 20%**. udev handles plug/unplug instantly;
+  the 2-min timer catches the 20% line. A polkit rule
+  (`net.hadess.PowerProfiles.switch-profile` → allow root) lets the session-less service
+  switch profiles. Check: `busctl --system get-property org.freedesktop.UPower.PowerProfiles
+  /org/freedesktop/UPower/PowerProfiles org.freedesktop.UPower.PowerProfiles ActiveProfile`.
+  Override manually and it re-asserts within 2 min; `systemctl mask
+  kb3lyb-power-profile.timer` to disable. Thresholds live in `/usr/bin/kb3lyb-power-profile`.

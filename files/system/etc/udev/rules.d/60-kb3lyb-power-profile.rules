@@ -1,0 +1,3 @@
+# Re-evaluate the power profile the instant an AC adapter or battery changes state
+# (plug/unplug, charging/discharging). --no-block so udev doesn't wait on the unit.
+SUBSYSTEM=="power_supply", RUN+="/usr/bin/systemctl --no-block start kb3lyb-power-profile.service"

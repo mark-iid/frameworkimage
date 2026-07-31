@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodically re-apply the power profile (catches the battery threshold)
+
+[Timer]
+OnBootSec=20s
+OnUnitActiveSec=2min
+AccuracySec=20s
+
+[Install]
+WantedBy=timers.target

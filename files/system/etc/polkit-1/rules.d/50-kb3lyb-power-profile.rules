@@ -1,0 +1,9 @@
+// Let the kb3lyb-power-profile system service (root, no active graphical session)
+// switch the power profile. net.hadess.PowerProfiles.switch-profile is otherwise
+// allow_active only, which a session-less service does not satisfy.
+polkit.addRule(function (action, subject) {
+    if (action.id == "net.hadess.PowerProfiles.switch-profile" &&
+        subject.user == "root") {
+        return polkit.Result.YES;
+    }
+});
