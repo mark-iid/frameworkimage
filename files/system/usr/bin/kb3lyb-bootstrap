@@ -82,8 +82,19 @@ if [[ ! -d "$HOME/.local/share/JetBrains/Toolbox" ]]; then
   if curl -fsSL "https://data.services.jetbrains.com/products/download?platform=linux&code=TBA" -o "$tmp/toolbox.tar.gz"; then
     tar -xzf "$tmp/toolbox.tar.gz" -C "$tmp"
     tbx="$(find "$tmp" -maxdepth 2 -name jetbrains-toolbox -type f | head -1)"
-    [[ -n "$tbx" ]] && "$tbx" >/dev/null 2>&1 & disown
-    say "JetBrains Toolbox launched to self-install; finish it from the tray"
+    if [[ -n "$tbx" ]]; then
+      # Stage the bootstrapper into ~/.local/bin FIRST, then launch it from there.
+      # The old code ran it straight out of $tmp and then `rm -rf`'d $tmp right
+      # away, deleting the binary mid-self-install — so Toolbox never installed.
+      # Copying to a stable, on-PATH location makes the cleanup below safe and
+      # leaves a working launcher behind. setsid fully detaches it from this shell.
+      mkdir -p "$HOME/.local/bin"
+      install -m755 "$tbx" "$HOME/.local/bin/jetbrains-toolbox"
+      setsid "$HOME/.local/bin/jetbrains-toolbox" >/dev/null 2>&1 </dev/null &
+      say "JetBrains Toolbox launched; complete sign-in from its window (Super+D → JetBrains Toolbox)."
+    else
+      warn "JetBrains Toolbox binary not found in the downloaded archive"
+    fi
   else
     warn "JetBrains Toolbox download failed"
   fi
