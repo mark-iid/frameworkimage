@@ -120,4 +120,17 @@ else
   warn "zsh not installed; leaving login shell unchanged"
 fi
 
+# --- 5. desktop appearance -----------------------------------------------------
+# Global dark mode. niri has no settings daemon (unlike GNOME/KDE), so nothing
+# sets the XDG desktop-portal color-scheme for us — yet GTK4/libadwaita, Firefox,
+# Electron and portal-aware Qt apps all read `prefer-dark` from it. gtk-theme
+# additionally covers older GTK3 apps that theme directly instead of via the
+# portal. This is a per-user dconf setting (lives in $HOME), so it can't be baked
+# into the image; apply it here. Idempotent — re-running just re-sets the value.
+if command -v gsettings >/dev/null; then
+  say "setting global dark mode (portal color-scheme + GTK theme)"
+  gsettings set org.gnome.desktop.interface color-scheme prefer-dark || warn "could not set color-scheme (no dbus session? run inside the niri session)"
+  gsettings set org.gnome.desktop.interface gtk-theme Adwaita-dark    || warn "could not set gtk-theme"
+fi
+
 say "bootstrap complete. Open a new shell (zsh) to pick up the environment."
