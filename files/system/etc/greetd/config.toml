@@ -1,17 +1,20 @@
 # kb3lyb-sway greeter (DESIGN §2: greetd + tuigreet).
-# tuigreet launches a niri session. `niri --session` runs niri as a proper
-# session (imports environment, brings up the graphical-session systemd target),
-# which is what makes pipewire/portals/user services come up correctly.
-#
-# --theme: Norton Utilities palette (blue panel, light-cyan borders, light-yellow
+# The session command is /usr/bin/kb3lyb-greeter, a thin wrapper that paints the
+# whole VT Norton blue (redefines console palette color 0) and then execs tuigreet
+# with the Norton Utilities palette (blue field, light-cyan borders, light-yellow
 # highlights, white text) to match the KB3LYB / markearnest.net presentation style.
-# The theme string was validated to parse by tuigreet before baking. LOGIN-CRITICAL:
-# a bad greetd command breaks login — verify on the machine after upgrading, and
-# roll back to the previous deployment from the boot menu if it ever fails.
+# tuigreet launches `niri --session` — niri as a proper session (imports env, brings
+# up graphical-session.target) so pipewire/portals/user services come up correctly.
+#
+# The big login font comes from /etc/vconsole.conf (latarcyrheb-sun32), not here.
+#
+# LOGIN-CRITICAL: a bad greetd command breaks login. The wrapper's color step is
+# guarded and `exec tuigreet` is unconditional, but verify on the machine after
+# upgrading and roll back to the previous deployment from the boot menu if it fails.
 
 [terminal]
 vt = 1
 
 [default_session]
-command = "tuigreet --theme 'container=blue;border=lightcyan;title=lightcyan;greet=lightyellow;text=white;time=lightcyan;prompt=lightyellow;input=white;action=lightcyan;button=lightyellow' --greeting 'KB3LYB' --window-padding 2 --time --remember --remember-session --asterisks --cmd 'niri --session'"
+command = "/usr/bin/kb3lyb-greeter"
 user = "greetd"

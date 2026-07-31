@@ -1,0 +1,28 @@
+#!/bin/sh
+# kb3lyb-greeter — greetd session command (DESIGN §2). Wraps tuigreet so the WHOLE
+# login screen is Norton blue, not just the centered prompt box.
+#
+# tuigreet has no full-screen background option — it only colors its container. The
+# area around it keeps the console default background (palette color 0 = black). So
+# before launching, we redefine console palette color 0 to 0x0000AA (the same blue
+# tuigreet paints the container with, ANSI "blue" = index 4 = 0000AA on the Linux
+# console) using the Linux private OSC `ESC ] P n RRGGBB`. Every unpainted cell then
+# renders in that blue, giving one uniform Norton-blue field behind the KB3LYB box.
+# This only works on a real Linux VT (fbcon), which is exactly where greetd runs it.
+#
+# LOGIN-CRITICAL: `exec tuigreet` is the last line and the cosmetic printf/clear are
+# guarded with `|| true`, so a failure in the color step can never block login. If
+# tuigreet itself is ever misconfigured, roll back to the previous deployment from
+# the boot menu (SETUP §6 / §8).
+printf '\033]P00000AA' 2>/dev/null || true   # palette color 0 (default bg) -> Norton blue
+clear 2>/dev/null || true
+
+exec tuigreet \
+  --theme 'container=blue;border=lightcyan;title=lightcyan;greet=lightyellow;text=white;time=lightcyan;prompt=lightyellow;input=white;action=lightcyan;button=lightyellow' \
+  --greeting 'KB3LYB' \
+  --window-padding 2 \
+  --time \
+  --remember \
+  --remember-session \
+  --asterisks \
+  --cmd 'niri --session'

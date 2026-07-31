@@ -212,6 +212,23 @@ Done since the first cut (kept for history):
 - **Electron Wayland overrides (§4):** confirmed on the real install — Slack renders
   sharp and dark.
 - **Mail:** Evolution + evolution-ews baked (M365/Graph + personal; mako notifications).
+- **Speaker DSP (EasyEffects):** `cab404/framework-dsp` presets are installed to
+  `~/.var/app/com.github.wwmm.easyeffects/config/easyeffects/{output,irs}` (the three
+  output presets + the convolver impulse-responses; `%CFG%` in each preset is rewritten
+  to that absolute path so the Flatpak sandbox finds the IRs). **Gracefu's Edits** is
+  the loaded output preset. It's applied live and reasserted every login by an
+  EasyEffects `--service-mode` background process (niri `spawn-at-startup`, dotfiles).
+  To switch presets: open EasyEffects → Presets → pick another, or
+  `flatpak run com.github.wwmm.easyeffects -l "HifiScan+EEGuide"`. Re-run the upstream
+  installer to update the presets (this is per-user `$HOME` data, not baked).
+- **Norton-blue login + wallpaper + big console font:** the tuigreet greeter runs via
+  `/usr/bin/kb3lyb-greeter`, which redefines console palette color 0 to `#0000AA` so the
+  *whole* login screen is one Norton blue (not just the prompt box), then execs tuigreet
+  with the Norton palette. `/etc/vconsole.conf` sets `FONT=latarcyrheb-sun32` (a 16x32
+  glyph, ~double the stock size) so login/boot text is legible on the 200-DPI panel. The
+  niri session paints a matching solid `#0000AA` wallpaper via `swaybg -c 0000AA`
+  (dotfiles `spawn-at-startup`). All three are LOGIN-adjacent; the greeter change is
+  login-critical — verify after upgrade, roll back from the boot menu if login breaks.
 - **Automatic power profiles:** niri has no GNOME power panel, so `kb3lyb-power-profile`
   (script + `.timer` + a `power_supply` udev rule) drives tuned-ppd: **performance on
   AC, balanced on battery, power-saver below 20%**. udev handles plug/unplug instantly;
