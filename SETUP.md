@@ -217,6 +217,12 @@ Still open:
   kanshi is installed; the profile isn't written — it keys on the specific output/EDID,
   so it's easiest to author with a display plugged in.
 - **`fw-fanctrl` (§3):** explicitly deferred; battery charge limit is set in BIOS.
+- **Alpine TUI mail:** configure `alpine` for the **personal IMAP** account (NOT the
+  M365 one — that needs OAuth2/Graph, which Alpine doesn't do cleanly; Evolution stays
+  the M365 client). Needs alpine installed (layer the `alpine` rpm or `brew install
+  alpine`) + a `~/.pinerc` with the IMAP/SMTP servers and folder collection; store the
+  password in the keyring or an app password, never in the config. A TUI complement to
+  Evolution for quick terminal mail.
 
 Done since the first cut (kept for history):
 - **Ghostty terminal (§2):** baked from the `scottames/ghostty` COPR (the source
