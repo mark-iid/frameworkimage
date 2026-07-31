@@ -44,12 +44,21 @@ else
 fi
 
 # --- 3. $HOME tooling ----------------------------------------------------------
-# Homebrew (Linux) — also the source of the .zshrc plugins.
+# Homebrew (Linux) — also the source of the .zshrc plugins. It installs to the
+# shared prefix /home/linuxbrew/.linuxbrew, which takes a one-time `sudo` to
+# create. The NONINTERACTIVE installer will NOT prompt for that password and
+# aborts with a "Need sudo access"/permissions error when sudo isn't already
+# authenticated — so prime the sudo credential cache first (you'll be asked once),
+# then run the installer non-interactively.
 if ! command -v brew >/dev/null && [[ ! -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
-  say "installing Homebrew"
-  NONINTERACTIVE=1 /bin/bash -c \
-    "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
-    || warn "brew install failed"
+  say "installing Homebrew (needs your password once, to create /home/linuxbrew)"
+  if sudo -v; then
+    NONINTERACTIVE=1 /bin/bash -c \
+      "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
+      || warn "brew install failed"
+  else
+    warn "brew install skipped: it needs sudo to create /home/linuxbrew. Fix sudo access, then re-run kb3lyb-bootstrap."
+  fi
 fi
 if [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
