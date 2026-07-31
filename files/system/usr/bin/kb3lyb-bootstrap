@@ -101,4 +101,23 @@ if [[ ! -d "$HOME/.local/share/JetBrains/Toolbox" ]]; then
   rm -rf "$tmp"
 fi
 
+# --- 4. login shell ------------------------------------------------------------
+# The dotfiles target zsh (.zshrc). Make it the login shell so a fresh user lands
+# in zsh — and thus brew + plugins — without a manual chsh. `sudo chsh` lets root
+# change the shell without prompting for the account password via PAM; sudo was
+# primed above by the brew step, and we re-prime defensively in case brew was
+# already installed and that path got skipped. zsh's RPM registers /usr/bin/zsh in
+# /etc/shells, so chsh accepts it.
+if command -v zsh >/dev/null; then
+  zsh_path="$(command -v zsh)"
+  current_shell="$(getent passwd "$USER" | cut -d: -f7)"
+  if [[ "$current_shell" != "$zsh_path" ]]; then
+    say "setting login shell to zsh"
+    sudo -v && sudo chsh -s "$zsh_path" "$USER" \
+      || warn "could not set login shell to zsh; run manually: chsh -s $zsh_path"
+  fi
+else
+  warn "zsh not installed; leaving login shell unchanged"
+fi
+
 say "bootstrap complete. Open a new shell (zsh) to pick up the environment."
