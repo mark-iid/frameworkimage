@@ -88,10 +88,14 @@ modules:
       copr:
         - scottames/ghostty
     install:
+      # Plain package, NOT the scoped `repo: copr:…` form: ghostty pulls zlib-ng
+      # (and gtk4-layer-shell) as deps, and zlib-ng lives in the Fedora repo, not
+      # the COPR. The scoped form restricts resolution to the COPR only, so the
+      # build fails with "nothing provides zlib-ng". Enabling the COPR (above) and
+      # listing ghostty plainly lets deps resolve from Fedora + the COPR together.
+      # (wl-clip-persist can use the scoped form because it has no external deps.)
       packages:
-        - repo: copr:copr.fedorainfracloud.org:scottames:ghostty
-          packages:
-            - ghostty
+        - ghostty
 
   # Icon font for the desktop UI. waybar (and its style.css) render status glyphs
   # from Nerd Fonts' Material Design Icon set — battery/network/volume/backlight.
