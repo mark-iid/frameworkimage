@@ -115,6 +115,20 @@ modules:
         - zsh                               # login shell the dotfiles/.zshrc target (§6);
                                             # kb3lyb-bootstrap ends by telling you to open zsh
 
+  # Evolution (mail) — the one GUI app layered NATIVE rather than a flatpak (the
+  # §8.5 default). Native gives reliable Microsoft 365 / Graph OAuth against the
+  # system Secret Service keyring and keeps the evolution-ews backend out of the
+  # flatpak sandbox. evolution-ews provides the "Microsoft 365" account type (plain
+  # EWS is being retired by Microsoft). New-mail alerts go through mako via
+  # Evolution's built-in Mail Notification plugin; the SNI tray plugin was declined
+  # (would need a custom in-image build stage + tracks Evolution's ABI — not worth
+  # the maintenance). Both in Fedora repos; no external repo.
+  - type: dnf
+    install:
+      packages:
+        - evolution
+        - evolution-ews
+
   # GUI apps as flatpaks (DESIGN §8.5: prefer $HOME/flatpak over layering/overrides).
   # Electron apps (slack/discord/bitwarden) are forced onto native Wayland for
   # sharp HiDPI via seeded flatpak overrides — see files/.../factory + the
