@@ -75,6 +75,17 @@ if [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
     say "brew bundle from dotfiles Brewfile"
     brew bundle --file="$DOTFILES_DIR/Brewfile" || warn "some brew formulae failed (non-fatal)"
   fi
+  # rbw (Bitwarden CLI, powers the Mod+P/Mod+O pickers) — settings only, no secrets.
+  # base_url/email aren't sensitive (the URL is already public via TLS cert
+  # transparency). A one-time `rbw login` (master password + TOTP) is still needed;
+  # the agent handles unlocks after that.
+  if command -v rbw >/dev/null; then
+    say "configuring rbw (still need a one-time 'rbw login')"
+    rbw config set base_url https://pw.mystikos.org
+    rbw config set email mark@mystikos.org
+    rbw config set pinentry pinentry-gnome3
+    rbw config set lock_timeout 3600
+  fi
 fi
 
 # SDKMAN (Java for SailPoint IIQ — DESIGN §2), installs to ~/.sdkman
