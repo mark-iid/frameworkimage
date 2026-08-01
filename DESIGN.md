@@ -200,8 +200,10 @@ public.
 
 **Desktop session behavior lives in the dotfiles repo, not here** (per the split
 above): global dark mode (GTK `settings.ini` + `gsettings color-scheme prefer-dark`),
-idle-lock (swayidle → gtklock), the tray applets (nm-applet/blueman), clipboard
-persistence (wl-clip-persist), and a `graphical-session-bind.service`.
+idle-lock (swayidle → swaylock — a *static* locker: gtklock's live clock repainted
+every minute and re-woke the panel, so the 10-min DPMS-off never held overnight),
+the tray applets (nm-applet/blueman), clipboard persistence (wl-clip-persist), and a
+`graphical-session-bind.service`.
 
 That last one is a non-obvious workaround worth recording. greetd launches niri as a
 bare `niri --session`, **not** via `niri.service` — so `graphical-session.target` is
