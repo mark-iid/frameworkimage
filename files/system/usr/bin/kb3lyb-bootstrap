@@ -28,6 +28,13 @@ else
   git clone "$DOTFILES_REPO" "$DOTFILES_DIR" || { warn "clone failed — check network and re-run"; exit 1; }
 fi
 
+# Activate the repo's secret-blocking pre-commit hook. core.hooksPath is local git
+# config (not carried by clone), so set it here — this keeps credentials from ever
+# being committed into the public dotfiles repo.
+if [[ -x "$DOTFILES_DIR/.githooks/pre-commit" ]]; then
+  git -C "$DOTFILES_DIR" config core.hooksPath .githooks
+fi
+
 # --- 2. stow -------------------------------------------------------------------
 if command -v stow >/dev/null; then
   say "stowing dotfiles into $HOME"
