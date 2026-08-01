@@ -192,6 +192,9 @@ modules:
     system:
       enabled:
         - greetd.service
+        - kb3lyb-console-font.service   # re-set the big HiDPI console font after
+                                        # vconsole-setup (installer's /etc/vconsole.conf
+                                        # otherwise masks the baked FONT= default)
         - tailscaled.service
         - rpm-ostreed-automatic.timer
         - flatpak-update.timer

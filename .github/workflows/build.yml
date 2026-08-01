@@ -18,6 +18,9 @@ jobs:
   bluebuild:
     name: Build Custom Image
     runs-on: ubuntu-latest
+    # Bound a wedged build (e.g. a hung RPM Fusion codec mirror) so it fails fast and
+    # can be re-run, instead of hanging up to GitHub's 6h default.
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: write

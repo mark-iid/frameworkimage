@@ -1,0 +1,16 @@
+[Unit]
+Description=Apply the large HiDPI console font
+# systemd-vconsole-setup applies /etc/vconsole.conf. On a real install that file is
+# the installer's (eurlatgr), and ostree treats it as machine-owned — so our baked
+# FONT=latarcyrheb-sun32 default is masked and the big font never applies. Re-set it
+# unconditionally after vconsole-setup, before the greeter shows on the VT.
+After=systemd-vconsole-setup.service
+Before=greetd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/setfont latarcyrheb-sun32
+
+[Install]
+WantedBy=multi-user.target

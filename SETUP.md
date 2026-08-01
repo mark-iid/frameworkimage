@@ -146,15 +146,11 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       `sfdisk`/`cryptsetup` (the image has no `sgdisk`/`parted`). Confirm auto-unlock
       survives a reboot: `findmnt /var/mnt/data`.
 - [ ] Evolution: use the **Microsoft 365 / Graph** account type, not EWS (§3).
-- [ ] **Adopt the big console font.** The image ships `FONT=latarcyrheb-sun32` (16x32,
-      ~2x the stock size) as its `/etc/vconsole.conf` default, but the installer writes a
-      real `/etc/vconsole.conf` (`eurlatgr`) at install time, so ostree treats it as
-      machine-owned and never overwrites it on upgrade — the big font silently never
-      applies. Adopt the image default once (persists; also lets future upgrades track it):
-      ```
-      sudo cp /usr/etc/vconsole.conf /etc/vconsole.conf   # sun32; the image default
-      sudo setfont -C /dev/tty1 latarcyrheb-sun32         # apply to the greeter VT now
-      ```
+- [x] **Big console font — now automatic.** `kb3lyb-console-font.service` runs
+      `setfont latarcyrheb-sun32` after `systemd-vconsole-setup`, so the ~2x HiDPI font
+      applies out of the box even though the installer's `/etc/vconsole.conf` (`eurlatgr`)
+      masks the baked `FONT=` default. No manual step needed anymore. (Historically this
+      required `cp /usr/etc/vconsole.conf /etc/` — the service replaced that.)
       Still too small on the 200-DPI panel? `solar24x32` is wider (24x32) — swap the name
       in `/etc/vconsole.conf`.
 - [ ] **Boot style — graphical splash is the default (and preferred).** The base
