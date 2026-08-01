@@ -157,21 +157,22 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       ```
       Still too small on the 200-DPI panel? `solar24x32` is wider (24x32) — swap the name
       in `/etc/vconsole.conf`.
-- [ ] *(optional)* **Show the text boot instead of the Plymouth splash.** The base
-      image's cmdline carries `rhgb quiet`. Drop **only `rhgb`** — keep `quiet`:
+- [ ] **Boot style — graphical splash is the default (and preferred).** The base
+      cmdline carries `rhgb quiet`, i.e. the Plymouth graphical splash + a graphical LUKS
+      passphrase box. Keep it. If a fresh reinstall or an earlier experiment left `rhgb`
+      off (text console boot), put it back:
       ```
-      sudo rpm-ostree kargs --delete=rhgb   # text boot with systemd progress
+      sudo rpm-ostree kargs --append-if-missing=rhgb
       systemctl reboot
       ```
-      **Do not also delete `quiet`.** Without it the full kernel log firehose prints to the
-      console and overwrites the initramfs LUKS passphrase prompt (looks blank until you
-      start typing) and bleeds over the tuigreet login screen. `quiet` only silences the
-      noisy kernel ring buffer — you still get systemd's `Starting…/Started` unit progress,
-      which is the readable boot. If you already deleted `quiet`, put it back with
-      `sudo rpm-ostree kargs --append-if-missing=quiet`. This is a *local* karg change
-      (persists across `rpm-ostree upgrade`, not baked — bootc `kargs.d` can only append,
-      not remove the base `rhgb quiet`), so redo it after a fresh reinstall. To read the
-      full kernel log after boot instead: `journalctl -b -k`.
+      Text boot was tried and reverted: dropping `rhgb` (`kargs --delete=rhgb`) shows the
+      console/systemd boot, but the initramfs LUKS prompt then renders on the bare console
+      and the noisy kernel ring buffer overwrites it (looks blank until you type) and bleeds
+      over the tuigreet login screen — Plymouth avoids all of that. **Always keep `quiet`**
+      regardless; if it ever goes missing, `sudo rpm-ostree kargs --append-if-missing=quiet`.
+      These are *local* karg changes (persist across `rpm-ostree upgrade`, not baked — bootc
+      `kargs.d` can only append, not remove the base `rhgb quiet`), so redo after a fresh
+      reinstall. To read the full kernel log after any boot: `journalctl -b -k`.
 
 ---
 
