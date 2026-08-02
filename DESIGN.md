@@ -204,10 +204,20 @@ plus `GTK_THEME=Adwaita:dark` exported from niri's `environment{}` — XFCE apps
 Thunar ignore `gtk-application-prefer-dark-theme` and stay light unless the dark
 *variant* is named explicitly, which the env var forces without any extra theme
 package),
-idle-lock (swayidle → swaylock — a *static* locker: gtklock's live clock repainted
-every minute and re-woke the panel, so the 10-min DPMS-off never held overnight),
+idle-lock (swayidle: at 5 min a full-screen cmatrix "screensaver" appears; any
+input tears it down and **gtklock** locks — password *or* fingerprint, with a
+navy Norton style, a live clock, and username; at 10 min the displays DPMS off;
+lock before suspend — see dotfiles `niri/scripts/screensaver`),
 the tray applets (nm-applet/blueman), clipboard persistence (wl-clip-persist), and a
 `graphical-session-bind.service`.
+
+Locker note: gtklock (not swaylock) because swaylock is a bare ring with no field,
+labels, or usable fingerprint UX. gtklock's live clock is harmless — a verified
+test showed the panel still blanks on *input* idle while an animation repaints
+every second, so blanking is driven by ext-idle-notify, not by surface damage;
+the earlier "gtklock's clock re-woke the panel" claim was a misdiagnosis. gtklock
+launched by swayidle.service needs `Environment=GTK_THEME=Adwaita:dark` (it doesn't
+inherit niri's `environment{}`), else PAM prompts render white-on-white.
 
 That last one is a non-obvious workaround worth recording. greetd launches niri as a
 bare `niri --session`, **not** via `niri.service` — so `graphical-session.target` is
