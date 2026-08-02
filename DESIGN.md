@@ -199,7 +199,11 @@ Do not bake secrets, tokens, or rclone credentials into the image. The image is
 public.
 
 **Desktop session behavior lives in the dotfiles repo, not here** (per the split
-above): global dark mode (GTK `settings.ini` + `gsettings color-scheme prefer-dark`),
+above): global dark mode (GTK `settings.ini` + `gsettings color-scheme prefer-dark`,
+plus `GTK_THEME=Adwaita:dark` exported from niri's `environment{}` — XFCE apps like
+Thunar ignore `gtk-application-prefer-dark-theme` and stay light unless the dark
+*variant* is named explicitly, which the env var forces without any extra theme
+package),
 idle-lock (swayidle → swaylock — a *static* locker: gtklock's live clock repainted
 every minute and re-woke the panel, so the 10-min DPMS-off never held overnight),
 the tray applets (nm-applet/blueman), clipboard persistence (wl-clip-persist), and a
