@@ -172,7 +172,36 @@ modules:
           - org.libreoffice.LibreOffice
           - com.valvesoftware.Steam
           - io.github.kolunmi.Bazaar   # app store (Flathub)
+          # Daily & comms
+          - net.cozic.joplin_desktop   # Notes — bound to Mod+N in the niri config (dotfiles)
+          - org.videolan.VLC
+          - us.zoom.Zoom
+          - com.github.IsmaelMartinez.teams_for_linux   # Teams (unofficial, better Wayland than the web app)
+          # System utilities
+          - com.github.tchx84.Flatseal          # flatpak permission editor
+          - com.github.wwmm.easyeffects         # audio EQ / effects
+          - io.missioncenter.MissionCenter      # graphical system monitor
+          - org.gnome.Firmware                  # fwupd GUI (firmware updates)
+          - org.remmina.Remmina                 # RDP/VNC remote desktop
+          # Creative & CAD
+          - org.blender.Blender
+          - org.gimp.GIMP
+          - org.audacityteam.Audacity
+          - org.freecad.FreeCAD
+          - com.orcaslicer.OrcaSlicer           # 3D-print slicer (Framework/hobby)
+          - org.godotengine.Godot
+          - cc.arduino.IDE2                     # Arduino IDE
+          - fr.handbrake.ghb                    # HandBrake video transcoder
+          # Dev & docs
+          - org.eclipse.Java                    # Eclipse IDE
+          - org.texstudio.TeXstudio             # LaTeX editor
+          - com.usebruno.Bruno                  # API client (Postman-like)
+          - com.abisource.AbiWord
+          - org.gnome.Boxes                     # GNOME Boxes (local VMs)
+          - com.hamrick.VueScan                 # scanner software
       - scope: user
+        install:
+          - org.gnome.seahorse.Application      # keyring/GNOME Keyring GUI (Seahorse)
 
   # Enable fingerprint auth via authselect (DESIGN §2/§7).
   - type: script

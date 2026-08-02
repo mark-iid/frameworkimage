@@ -165,9 +165,14 @@ limitation given HDMI is only used for presenting.
 - Nightly rebuild against the current pinned base, so upstream Fedora updates
   flow through without any action.
 - On the host: enable `rpm-ostreed-automatic.timer` with the staging policy.
-  There is no software center and no `uupd` on this base, so also add user timers
-  for `flatpak update -y` and `brew upgrade`. All three were previously handled by
-  Aurora's uupd in one unit; their absence will be noticed on day two.
+  There is no software center and no `uupd` on this base, so also add timers for
+  `flatpak update` (system scope) and `brew upgrade`. All three were previously
+  handled by Aurora's uupd in one unit; their absence will be noticed on day two.
+  `flatpak-update.timer` runs `OnCalendar=daily` **and** `OnBootSec=3min`: this is
+  a laptop that's often off overnight, and `Persistent=true` only re-runs a
+  *missed* daily slot, not one that already ran earlier today — so updates that
+  land on Flathub after that run would otherwise wait for the next midnight the
+  machine happens to be on. The boot trigger closes that gap.
 - Before any major version rebase, run `ostree admin pin 0` so a known-good
   deployment survives repeated reboots.
 - BlueBuild publishes timestamped tags alongside `latest`. Rolling back to a
