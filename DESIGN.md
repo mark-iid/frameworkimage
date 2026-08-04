@@ -1,10 +1,16 @@
 # kb3lyb-sway: custom Fedora Atomic image
 
-Design decisions for a personal BlueBuild image. This document is the source of
-truth for *what* is being built and *why*. It was produced in a planning session
-and is intended to seed a Claude Code session that does the actual implementation.
+Design decisions and rationale for a personal BlueBuild image — the record of
+*what* was built and *why*. This began as a planning brief that seeded the
+implementation; that work is now done, so it reads as a decision record rather
+than a to-do list.
 
-Read this whole file before writing any code.
+For the *how* rather than the *why*, the authoritative sources are the recipe,
+[`recipes/recipe.yml`](recipes/recipe.yml), for what actually ships, and
+[`SETUP.md`](SETUP.md) for the build/test/install/update runbook. Sections §3, §7,
+§8, and §9 are retained as a record of the planning phase; where they describe
+pre-implementation checks, draft values, or a task list rather than decisions, the
+recipe and `SETUP.md` supersede them.
 
 ---
 
@@ -243,8 +249,11 @@ chosen resolution is a passwordless login keyring (relying on LUKS FDE).
 
 ## 7. Recipe skeleton
 
-Starting point only. Every value needs verification against current BlueBuild
-docs and current Fedora package names.
+Starting point only, and now **superseded by the real recipe**,
+[`recipes/recipe.yml`](recipes/recipe.yml). The skeleton below still names the old
+`sericea` base and Fedora 42 and carries unverified package guesses; the shipping
+image is on `sway-atomic` at a later Fedora with corrected names. Kept for
+historical context — read the recipe for current truth.
 
 ```yaml
 name: kb3lyb-sway
