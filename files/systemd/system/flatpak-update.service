@@ -8,5 +8,13 @@ After=flatpak-system-update.service
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/flatpak update --system --noninteractive --assumeyes
-# A failed update (e.g. offline) shouldn't spam failures; the timer retries.
-SuccessExitStatus=0 1
+# NO SuccessExitStatus override. This used to carry `SuccessExitStatus=0 1` to
+# keep an offline run from reporting failure — but `flatpak update` exits 1 for
+# *both* "no network" and "the update actually failed", so that setting made the
+# unit report success no matter what went wrong. A browser that quietly stopped
+# receiving security updates would have shown green forever.
+#
+# The trade is accepted deliberately: on a laptop that is often off-network, an
+# offline day now leaves the unit failed until the next successful run. That is
+# mild noise, but it is *true* — it means the system flatpaks are not current,
+# which is exactly what `systemctl --failed` should be telling you.
