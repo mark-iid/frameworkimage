@@ -6,11 +6,17 @@
 # any other X client can read a window's input and contents. That is a poor
 # property for the password manager specifically.
 #
-# `fallback-x11` is deliberately KEPT: it grants X only when the wayland socket
-# is absent, which under niri never happens, so it is inert today while still
-# letting Bitwarden start if the Wayland session is ever broken. Revoking both
-# would trade a real safety net for no additional protection.
-sockets=wayland;fallback-x11;!x11;
+# `fallback-x11` goes with it, and NOT by choice: flatpak treats fallback-x11 as
+# a variant of the x11 socket, so `--nosocket=x11` clears both. Verified on the
+# live system — after the override, `flatpak info --show-permissions` reports
+# `sockets=wayland;` alone. Keeping `fallback-x11;` in this file would therefore
+# be a lie about the resulting sandbox; this line is written to match exactly
+# what `flatpak override --system --nosocket=x11` produces.
+#
+# No practical loss: fallback-x11 only ever applies when the wayland socket is
+# absent, and if Wayland is down under niri there is no desktop to run Bitwarden
+# in anyway.
+sockets=wayland;!x11;
 
 [Environment]
 ELECTRON_OZONE_PLATFORM_HINT=auto
