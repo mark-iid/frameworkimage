@@ -17,12 +17,25 @@ Done once per repo clone. CI is `.github/workflows/`:
       ```
       gh secret set SIGNING_SECRET < cosign.key
       ```
-- [ ] **`SIGNING_SECRET` in the *Dependabot* secret store too** — Dependabot PRs run
-      in a restricted context and don't get Actions secrets, so their build checks
-      fail on signing without this:
+- [ ] **Do NOT put `SIGNING_SECRET` in the Dependabot secret store.** It used to be
+      there so Dependabot PR builds could sign, but that handed the image signing
+      key to third-party action code *before* anyone reviewed the bump proposing
+      it. `build.yml` now skips Dependabot runs entirely (`if: github.actor !=
+      'dependabot[bot]'`), so nothing needs it. If a copy still exists:
       ```
-      gh secret set SIGNING_SECRET --app dependabot < cosign.key
+      gh secret delete SIGNING_SECRET --app dependabot
       ```
+      The cost is that action bumps merge without a green build. Acceptable: a
+      broken build on main just means "no new image today" and the laptop keeps
+      running the last good signed deployment (§5).
+
+> **Why not keyless signing?** Sigstore keyless (OIDC → Fulcio → Rekor, no
+> long-lived key) would remove this whole class of problem, and the workflow
+> already grants `id-token: write`. It is **not available**: `blue-build/github-
+> action` declares `cosign_private_key` as a *required* input and its `action.yml`
+> contains no keyless/OIDC/Fulcio/Rekor path. Verified against the action
+> definition on `main`, not assumed. Revisit if upstream adds support — this key
+> is the single credential that can put root on the laptop via a signed update.
 - [ ] **Settings → Actions → Workflow permissions:** *Read and write* + tick
       *Allow GitHub Actions to create and approve pull requests* (version-bump needs it).
 - [ ] **Make the `ghcr.io/<owner>/kb3lyb-sway` package public** after the first
@@ -125,18 +138,59 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
 - [ ] `kb3lyb-bootstrap` — clones dotfiles (prompts for a token), stows them, installs
       brew + Brewfile, SDKMAN, JetBrains Toolbox, and native Discord into `$HOME` (§6).
 - [ ] `fprintd-enroll` — re-enroll fingerprints (not portable, §10).
-- [ ] **Make the login keyring passwordless** (needed once fingerprint login is set
-      up). `pam_fprintd` is `sufficient` and first in `system-auth`, so a fingerprint
-      login never captures a password — and `pam_gnome_keyring` then can't unlock the
-      login keyring. Symptom: VS Code "keychain"/Secret Service errors, Evolution can't
-      store its OAuth token, `secret-tool` fails. Fix (leans on LUKS FDE for at-rest
-      protection): open **Seahorse** (Passwords and Keys) → right-click the **Login**
-      keyring → **Change Password** → old = your login password, new = **blank** →
-      accept "Use Unsafe Storage". It then auto-unlocks at every login regardless of
-      how you authenticate. Verify: `busctl --user get-property org.freedesktop.secrets
-      /org/freedesktop/secrets/collection/login org.freedesktop.Secret.Collection
-      Locked` → `b false`. (Alternative: log in with your password instead of the
-      finger — the keyring then unlocks the normal way, no blank password needed.)
+- [ ] **Give the login keyring a REAL password.** This reverses the old
+      "passwordless keyring" step, which stored every Secret Service credential
+      (Evolution M365 OAuth tokens, Nextcloud, VS Code) encrypted with the empty
+      string — readable by any process running as you, and readable straight out of
+      any `/var/home` backup.
+
+      That workaround existed only because `pam_fprintd` was `sufficient` at the top
+      of `system-auth`: it short-circuited `pam_unix`, so login never captured a
+      password and `pam_gnome_keyring` had nothing to unlock with. The image no
+      longer enables the global fingerprint feature — it is scoped to
+      `/etc/pam.d/gtklock` instead — so login goes through `pam_unix` again and the
+      normal mechanism works.
+
+      In **Seahorse** → right-click the **Login** keyring → **Change Password** →
+      old = **blank**, new = **your login password**. They must match, or
+      `pam_gnome_keyring` cannot auto-unlock it at login.
+
+      Verify after a fresh login:
+      ```
+      busctl --user get-property org.freedesktop.secrets \
+        /org/freedesktop/secrets/collection/login \
+        org.freedesktop.Secret.Collection Locked      # -> b false
+      ```
+      If it reports `b true`, the keyring password does not match the login
+      password. Symptom of a still-locked keyring: VS Code "keychain"/Secret
+      Service errors, Evolution unable to store its OAuth token, `secret-tool`
+      failing.
+- [ ] **Scope fingerprint to the screen lock on an EXISTING machine.**
+      `/etc/authselect` is machine-owned, so the build-time change does not reach an
+      already-installed system. Run it once:
+      ```
+      sudo authselect disable-feature with-fingerprint
+      sudo authselect apply-changes
+      grep pam_fprintd /etc/pam.d/system-auth || echo "clear — fingerprint is out of system-auth"
+      ```
+      After this: login and `sudo` want your password; the screen lock still takes
+      your finger (via the baked `/etc/pam.d/gtklock`, which arrives with the image
+      — check it is present before running the above, or you lose the finger at the
+      locker too until you reboot into the new deployment).
+
+      Losing fingerprint-for-`sudo` is deliberate, not collateral: a fingerprint is
+      not a secret, it can be lifted and it can be compelled, and this account is in
+      `wheel`.
+- [ ] **Remove the old native Discord** (only on a machine that ran the pre-
+      2026-08-08 bootstrap — Discord is a flatpak again now):
+      ```
+      rm -rf ~/.local/share/Discord ~/.config/discord
+      rm -f  ~/.local/bin/discord ~/.local/share/applications/discord.desktop
+      rm -f  ~/.local/share/icons/hicolor/256x256/apps/discord.png
+      update-desktop-database ~/.local/share/applications
+      ```
+      Quit the native client first. `~/.config/discord` holds its session token, so
+      you will sign in once in the flatpak.
 - [ ] `sudo tailscale up` — re-authenticate the node (identity isn't portable, §10).
 - [ ] **Network posture** (neither of these is baked into the image — firewalld zone
       config and tailscaled state both live in machine-owned `/etc` and `/var`, so a

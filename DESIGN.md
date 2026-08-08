@@ -243,9 +243,27 @@ from niri `spawn-at-startup` to pull the target up. A cleaner fix would be to la
 niri via `niri.service` from greetd, but that's login-critical and untested — the
 dotfiles workaround is low-risk and reversible.
 
-Note also the fingerprint↔keyring interaction (SETUP §6): fingerprint login never
-captures a password, so `pam_gnome_keyring` can't unlock the login keyring — the
-chosen resolution is a passwordless login keyring (relying on LUKS FDE).
+Note also the fingerprint↔keyring interaction (SETUP §6). `pam_fprintd` as
+`sufficient` at the top of `system-auth` short-circuits `pam_unix`, so a
+fingerprint login never captures a password and `pam_gnome_keyring` cannot unlock
+the login keyring. The original resolution was a **passwordless login keyring**
+leaning on LUKS for at-rest protection — which was a poor trade: it left every
+Secret Service credential encrypted with the empty string, readable by anything
+running as the user and readable straight out of a `/var/home` backup, while LUKS
+only ever covered the powered-off case.
+
+**Resolved 2026-08-08 by scoping the fingerprint instead of the keyring.** The
+global authselect `with-fingerprint` feature is no longer enabled; `pam_fprintd`
+is wired into `/etc/pam.d/gtklock` alone. Login and `sudo` take a password, so
+`pam_unix` runs and the keyring is properly encrypted and auto-unlocked; the
+screen lock — the case you actually hit dozens of times a day — still takes the
+finger. Fingerprint-for-`sudo` is given up deliberately: a fingerprint is not a
+secret, it can be lifted and compelled, and this account is in `wheel`.
+
+The locker was chosen as the one wired-in spot for a specific reason: its failure
+mode is benign. Anything wrong in `/etc/pam.d/gtklock` costs you a typed password
+at the lock screen, whereas the same mistake in `system-auth` or
+`/etc/pam.d/greetd` is a lockout.
 
 ---
 
