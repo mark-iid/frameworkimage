@@ -53,6 +53,12 @@ modules:
         # polkit-gnome is retired in F44; mate-polkit is the lightweight GTK agent
         # (ships /usr/libexec/polkit-mate-authentication-agent-1).
         - mate-polkit
+        # wtype — virtual-keyboard text injection (niri implements the
+        # zwp_virtual_keyboard protocol it uses). The voice dictation tooling
+        # (dotfiles: bin/voice-dictate, provisioned by bin/voice-setup) types
+        # transcribed speech into the focused window with it; also handy for any
+        # host-side "paste as keystrokes" scripting.
+        - wtype
         # session niceties
         - brightnessctl
         - playerctl
