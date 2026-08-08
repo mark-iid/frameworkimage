@@ -150,6 +150,18 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       laptop to other tailnet nodes is unaffected. Reverse either with
       `tailscale set --shields-up=false` / `--add-service=ssh` if you ever need to
       reach into this machine or actually enable `sshd`.
+- [ ] **Flatpak sandbox tightening on an EXISTING machine.** The seeds under
+      `usr/share/factory/…/overrides` are installed by tmpfiles `C` rules, which
+      copy only if the file is absent — so a fresh install picks these up
+      automatically, but a machine that already has the override file keeps its
+      old copy. Re-apply by hand after tightening any of them:
+      ```
+      sudo flatpak override --system --nosocket=x11 com.bitwarden.desktop
+      sudo flatpak override --system --nofilesystem=home --filesystem=xdg-download \
+        com.github.IsmaelMartinez.teams_for_linux
+      ```
+      Verify with `flatpak info --show-permissions <app>` — the effective
+      `[Context]` should show `!x11` / `!home` merged in.
 - [ ] Restore by hand, encrypted (never via repo/image, §10): `~/.ssh`, `~/.gnupg`,
       `~/.config/rclone/rclone.conf`, the atuin key (`~/.local/share/atuin/key`), then
       `atuin login` to resume sync.
