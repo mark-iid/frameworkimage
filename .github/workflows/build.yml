@@ -18,6 +18,18 @@ jobs:
   bluebuild:
     name: Build Custom Image
     runs-on: ubuntu-latest
+    # Dependabot PRs do not build. The build step requires the cosign signing key
+    # (`cosign_private_key` is a required input — blue-build's action has no
+    # keyless/OIDC path), and the key is no longer in the Dependabot secret store,
+    # so these runs could only fail. More to the point, we do not WANT them to
+    # have it: a Dependabot PR bumping a third-party action would otherwise run
+    # that new action code with the image signing key in hand, before anyone has
+    # reviewed the bump.
+    #
+    # The trade: an action bump merges without a green CI build behind it. That is
+    # acceptable because a broken build on main means only "no new image today" —
+    # the laptop keeps running the last good signed deployment (DESIGN §5).
+    if: github.actor != 'dependabot[bot]'
     # Bound a wedged build (e.g. a hung RPM Fusion codec mirror) so it fails fast and
     # can be re-run, instead of hanging up to GitHub's 6h default.
     timeout-minutes: 45
