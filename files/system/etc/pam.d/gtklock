@@ -1,0 +1,30 @@
+#%PAM-1.0
+# gtklock — screen locker PAM stack (DESIGN §2, SETUP §6).
+#
+# This is the ONE place fingerprint auth is wired in. The global authselect
+# `with-fingerprint` feature is deliberately not enabled (see
+# files/scripts/authselect-fingerprint.sh): putting pam_fprintd in system-auth
+# short-circuits pam_unix for *login* too, so no password token is captured and
+# pam_gnome_keyring cannot unlock the login keyring — which is what forced the
+# blank-password keyring this setup used to carry.
+#
+# Scoping it here gets the convenience without that cost. The screen unlock is
+# the high-frequency case (dozens of times a day); the login is once per boot.
+#
+# `sufficient` means: if the finger is recognised, auth succeeds immediately. If
+# fprintd fails, times out, is not enrolled, or is not running, the stack simply
+# falls through to `include login` -> system-auth -> pam_unix and gtklock prompts
+# for the password as normal.
+#
+# DELIBERATELY MINIMAL: upstream ships exactly one line, `auth include login`,
+# with no account/password/session sections — gtklock only ever calls
+# pam_authenticate. Adding those sections would drag pam_selinux/pam_loginuid/
+# pam_namespace into a locker that has no business running them, so this file is
+# the upstream content plus one line and nothing else.
+#
+# FAILURE MODE IS BENIGN BY DESIGN. The worst outcome from anything wrong here is
+# "type your password to unlock the screen" — it is not on the login path, so it
+# cannot lock you out of the machine. That is exactly why the fingerprint lives
+# here rather than in system-auth or /etc/pam.d/greetd.
+auth       sufficient   pam_fprintd.so
+auth       include      login
