@@ -33,8 +33,15 @@ jobs:
           - recipe.yml
     steps:
       # the build is fully handled by the reusable github action
+      #
+      # Pinned to a commit SHA, not the `v1.12` tag: this step receives the cosign
+      # signing key, and the laptop's /etc/containers/policy.json trusts whatever
+      # that key signs (rpm-ostreed-automatic then stages it for the next boot). A
+      # mutable tag means the action owner — or anyone who compromises that repo —
+      # can change what runs with the key in hand. Dependabot still bumps SHA pins
+      # and keeps the trailing version comment in sync.
       - name: Build Custom Image
-        uses: blue-build/github-action@v1.12
+        uses: blue-build/github-action@836161eb076426a451e6a0054f722b1153b8b3ad # v1.12
         with:
           recipe: ${{ matrix.recipe }}
           cosign_private_key: ${{ secrets.SIGNING_SECRET }}

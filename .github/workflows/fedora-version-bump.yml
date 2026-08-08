@@ -20,7 +20,9 @@ jobs:
     name: Check for a newer Fedora release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      # Actions are pinned to commit SHAs rather than mutable tags — see the note
+      # in build.yml. Dependabot bumps the SHA and the version comment together.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install skopeo
         run: sudo apt-get update && sudo apt-get install -y skopeo
@@ -64,7 +66,7 @@ jobs:
 
       - name: Open PR
         if: steps.detect.outputs.should_bump == 'true'
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
           branch: fedora-bump-${{ steps.detect.outputs.latest }}
           delete-branch: true
