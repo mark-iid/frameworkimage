@@ -1,5 +1,16 @@
 [Context]
-sockets=wayland;fallback-x11;
+# !x11 revokes the plain X11 socket. The manifest grants BOTH `x11` and
+# `fallback-x11`; those are not the same thing. `x11` is unconditional, so
+# Bitwarden could reach Xwayland (niri sets DISPLAY=:0 session-wide and
+# xwayland-satellite is always up) — and X11 has no inter-client isolation, so
+# any other X client can read a window's input and contents. That is a poor
+# property for the password manager specifically.
+#
+# `fallback-x11` is deliberately KEPT: it grants X only when the wayland socket
+# is absent, which under niri never happens, so it is inert today while still
+# letting Bitwarden start if the Wayland session is ever broken. Revoking both
+# would trade a real safety net for no additional protection.
+sockets=wayland;fallback-x11;!x11;
 
 [Environment]
 ELECTRON_OZONE_PLATFORM_HINT=auto
