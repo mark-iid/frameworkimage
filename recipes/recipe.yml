@@ -15,10 +15,8 @@ image-version: 44
 # hardware+userland+VS Code layer (§9.5). $HOME installers (brew/SDKMAN/JetBrains)
 # are NOT baked (DESIGN §2) — they come via the dotfiles bootstrap in §9.6.
 modules:
-  - type: files
-    files:
-      - source: system
-        destination: /
+  # NOTE: the `files` module is deliberately NOT first — see the block just above
+  # the `script` module below for why. Package installs come first.
 
   # Codecs: RPM Fusion + ffmpeg swap + freeworld VA driver. Most fragile module;
   # kept in common/codecs.yml and smoke-tested in isolation via codec-test.yml.
@@ -223,7 +221,32 @@ modules:
         install:
           - org.gnome.seahorse.Application      # keyring/GNOME Keyring GUI (Seahorse)
 
-  # Enable fingerprint auth via authselect (DESIGN §2/§7).
+  # Baked config files (files/system -> /). MUST RUN AFTER EVERY dnf MODULE.
+  #
+  # This used to be the first module, which silently lost files. Module order is
+  # build order, so anything copied here that a LATER rpm also owns gets
+  # overwritten by that rpm — quietly, with no build error. Confirmed the hard
+  # way with /etc/pam.d/gtklock: `rpm -qc gtklock` lists no config files, so the
+  # path is not %config(noreplace) and the rpm simply replaced our version. The
+  # image built green and the file was just... the package default.
+  #
+  # /etc/greetd/config.toml and /etc/niri/config.kdl only survived that ordering
+  # by luck: those paths ARE %config(noreplace), so rpm kept ours and dropped its
+  # own as .rpmnew (there is a /etc/greetd/config.toml.rpmnew on the machine
+  # proving it). Relying on which upstream packages happen to mark their config
+  # correctly is not a strategy.
+  #
+  # Running last makes our copy authoritative regardless. It must still come
+  # BEFORE the `systemd` module below, which enables unit files that this module
+  # is what installs (kb3lyb-power-profile.timer, flatpak-update.timer,
+  # kb3lyb-console-font.service).
+  - type: files
+    files:
+      - source: system
+        destination: /
+
+  # Scope fingerprint auth via authselect (DESIGN §2/§7). After `files`, since the
+  # fingerprint PAM stack it reasons about is /etc/pam.d/gtklock from above.
   - type: script
     scripts:
       - authselect-fingerprint.sh
