@@ -162,7 +162,23 @@ EOF
   rm -rf "$tmp"
 fi
 
-# --- 4. login shell ------------------------------------------------------------
+# --- 4. voice toolbox ----------------------------------------------------------
+# Provision the `voice` toolbox behind the voice tooling (Mod+T dictation,
+# Mod+Shift+T niri command mode): whisper.cpp + vosk and their models, built in a
+# container so the heavy STT engines stay out of the image (only wtype is baked).
+# voice-setup is a stowed dotfiles script (bin package, linked in step 2) and is
+# idempotent. Non-fatal and referenced by absolute path (it may not be on PATH
+# yet): it needs network and compiles whisper.cpp (a few minutes), so a failure
+# here must not block the rest of bootstrap — just re-run voice-setup.
+VOICE_SETUP="$HOME/.local/bin/voice-setup"
+if [[ -x "$VOICE_SETUP" ]]; then
+  say "provisioning the voice toolbox (whisper.cpp + vosk; builds in a container, may take a few minutes)"
+  "$VOICE_SETUP" || warn "voice-setup failed (network? build?) — re-run later: voice-setup"
+else
+  warn "voice-setup not found (dotfiles not stowed?); skipping voice toolbox"
+fi
+
+# --- 5. login shell ------------------------------------------------------------
 # The dotfiles target zsh (.zshrc). Make it the login shell so a fresh user lands
 # in zsh — and thus brew + plugins — without a manual chsh. `sudo chsh` lets root
 # change the shell without prompting for the account password via PAM; sudo was
@@ -183,7 +199,7 @@ else
   warn "zsh not installed; leaving login shell unchanged"
 fi
 
-# --- 5. desktop appearance -----------------------------------------------------
+# --- 6. desktop appearance -----------------------------------------------------
 # Global dark mode. niri has no settings daemon (unlike GNOME/KDE), so nothing
 # sets the XDG desktop-portal color-scheme for us — yet GTK4/libadwaita, Firefox,
 # Electron and portal-aware Qt apps all read `prefer-dark` from it. gtk-theme
