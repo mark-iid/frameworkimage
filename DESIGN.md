@@ -217,7 +217,9 @@ Thunar ignore `gtk-application-prefer-dark-theme` and stay light unless the dark
 package),
 idle-lock (swayidle: at 5 min a full-screen cmatrix "screensaver" appears; any
 input tears it down and **gtklock** locks — password *or* fingerprint, with a
-navy Norton style, a live clock, and username; at 10 min the displays DPMS off;
+navy Norton style, a live clock, and username; at 5.5 min gtklock locks
+*unconditionally* as a backstop, so an untouched machine is genuinely locked
+rather than merely hidden behind the animation; at 10 min the displays DPMS off;
 lock before suspend — see dotfiles `niri/scripts/screensaver`),
 the tray applets (nm-applet/blueman), clipboard persistence (wl-clip-persist), and a
 `graphical-session-bind.service`.
