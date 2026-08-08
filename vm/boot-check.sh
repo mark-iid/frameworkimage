@@ -44,12 +44,18 @@ echo ">>> Booting $QCOW (KVM, VNC 127.0.0.1:590${VNC_DISPLAY}, ssh localhost:${S
 # niri's wlroots renderer requires. Plain -vga virtio (2D only) makes niri exit
 # immediately with no renderer. Serial is a unix socket (ttyS0) so we can log in
 # over it for diagnosis (serial-getty@ttyS0 runs in the guest).
+#
+# hostfwd is bound to 127.0.0.1 EXPLICITLY. `hostfwd=tcp::2222-:22` (no address)
+# listens on 0.0.0.0, and this guest has sshd enabled with a test/test account in
+# wheel (vm/biib-config.toml) — that published the throwaway VM to the LAN and the
+# tailnet for as long as the boot check ran. The VNC socket below was already
+# localhost-only; this matches it.
 rm -f vm/serial.sock
 qemu-system-x86_64 \
   -machine q35,accel=kvm -cpu host -m 4096 -smp 4 \
   -drive file="$QCOW",if=virtio,format=qcow2 \
   -device virtio-vga-gl -display egl-headless -vnc 127.0.0.1:${VNC_DISPLAY} \
-  -netdev user,id=n0,hostfwd=tcp::${SSH_PORT}-:22 -device virtio-net,netdev=n0 \
+  -netdev user,id=n0,hostfwd=tcp:127.0.0.1:${SSH_PORT}-:22 -device virtio-net,netdev=n0 \
   -device virtio-rng-pci \
   -qmp unix:"$QMP",server,nowait \
   -serial unix:vm/serial.sock,server,nowait \
