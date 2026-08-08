@@ -138,6 +138,18 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       Locked` → `b false`. (Alternative: log in with your password instead of the
       finger — the keyring then unlocks the normal way, no blank password needed.)
 - [ ] `sudo tailscale up` — re-authenticate the node (identity isn't portable, §10).
+- [ ] **Network posture** (neither of these is baked into the image — firewalld zone
+      config and tailscaled state both live in machine-owned `/etc` and `/var`, so a
+      clean install comes back with the permissive defaults):
+      ```
+      sudo tailscale set --shields-up                                  # no inbound from the tailnet
+      sudo firewall-cmd --permanent --zone=public --remove-service=ssh # sshd is disabled; drop the hole
+      sudo firewall-cmd --reload
+      ```
+      Shields-up blocks *inbound* connections only — outbound ssh/rsync from this
+      laptop to other tailnet nodes is unaffected. Reverse either with
+      `tailscale set --shields-up=false` / `--add-service=ssh` if you ever need to
+      reach into this machine or actually enable `sshd`.
 - [ ] Restore by hand, encrypted (never via repo/image, §10): `~/.ssh`, `~/.gnupg`,
       `~/.config/rclone/rclone.conf`, the atuin key (`~/.local/share/atuin/key`), then
       `atuin login` to resume sync.
