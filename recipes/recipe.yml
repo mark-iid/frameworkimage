@@ -144,6 +144,29 @@ modules:
         # noticeably worse than 5 GHz. Both plain Fedora 44 packages, no new repo.
         - wavemon
         - iperf3
+        # kismet — monitor-mode survey, for neighbor APs and channel congestion
+        # across all bands. Not a flatpak and can't sensibly be one: it captures
+        # on the raw interface through setuid-root helper binaries, which is the
+        # exact thing the sandbox exists to stop. Not on Flathub either (checked).
+        #
+        # Single radio, so monitor mode DROPS the wifi association — kismet and a
+        # working connection are mutually exclusive on this machine. That's why
+        # wavemon above is the tool for "how is my AP reaching this room" and
+        # kismet is for "what else is on the air"; they don't substitute.
+        #
+        # SECURITY, and the reason this package is not free: it ships its capture
+        # helpers setuid root and WORLD-EXECUTABLE (0104755 root:root) —
+        # kismet_cap_linux_wifi, _linux_bluetooth, _nrf_*, _ti_cc_*, _rz_killerbee,
+        # _hak5_wifi_coconut. The rpm creates a `kismet` group via
+        # /usr/lib/sysusers.d/kismet.conf and then doesn't gate the wifi helper on
+        # it. Only the niche ones (_sdr_*, _radiacode_usb, _serial_radview,
+        # _freaklabs_zigbee) are 0104550 root:root, i.e. root-only. So installing
+        # this hands every local uid a setuid-root NIC-manipulation binary.
+        # Single-user laptop, so the blast radius is small, but it is a real
+        # widening of the suid surface and is NOT mitigated by anything already in
+        # this image. Fix is a build-time chmod to 0750 root:kismet (see §1) —
+        # deliberately not done yet, tracked rather than silently assumed.
+        - kismet
         - rclone
         - fuse3                             # rclone FUSE mounts (§1)
         - fprintd
@@ -268,6 +291,12 @@ modules:
   - type: script
     scripts:
       - authselect-fingerprint.sh
+      # Narrow kismet's setuid-root capture helpers from world-executable to
+      # 4750 root:kismet. Order-independent of `files` (it only touches /usr/bin
+      # paths the rpm owns), but it MUST come after the dnf module above — the
+      # script hard-fails if kismet is absent rather than silently no-opping.
+      # Needs a per-machine follow-up: usermod -aG kismet <user>.
+      - kismet-suid-scope.sh
 
   # Display manager: base SDDM -> greetd. Plus tailscaled (§2) and the auto-update
   # timers (§5). Unit files for the flatpak/brew timers live in files/systemd/.
