@@ -225,7 +225,17 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       sudo flatpak override --system --nosocket=x11 com.bitwarden.desktop
       sudo flatpak override --system --nofilesystem=home --filesystem=xdg-download \
         com.github.IsmaelMartinez.teams_for_linux
+      sudo flatpak override --system --nodevice=all --device=dri --disallow=devel \
+        org.mozilla.firefox
+      sudo flatpak override --system --nofilesystem=/tmp \
+        --nofilesystem=~/.local/share/applications \
+        io.github.ungoogled_software.ungoogled_chromium
       ```
+      > **Test any new override before trusting it.** Apply it as `--user` first,
+      > launch the app, and confirm it actually runs — a `--user` override
+      > reproduces a system one's effect exactly. An override on
+      > `com.discordapp.Discord` silently crash-looped that app for months while
+      > everyone blamed zypak. Overrides are not free.
       Verify with `flatpak info --show-permissions <app>` — the effective
       `[Context]` should show `!x11` / `!home` merged in.
 - [ ] Restore by hand, encrypted (never via repo/image, §10): `~/.ssh`, `~/.gnupg`,
