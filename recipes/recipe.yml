@@ -132,6 +132,18 @@ modules:
         - wireguard-tools
         - openconnect                       # Cisco AnyConnect via openconnect (§2)
         - NetworkManager-openconnect-gnome
+        # Wi-Fi survey pair, for checking AP placement around the house. wavemon
+        # is the ncurses live signal/noise/SNR meter with a scrolling histogram
+        # (walk the house, watch dBm) plus an AP scan screen; `iw`, already in the
+        # base, covers one-shot `iw dev wlp1s0 link|scan` dumps for scripting.
+        # iperf3 is the other half and not optional: dBm and usable throughput
+        # diverge badly at range, so a room that reads -65 can still have a
+        # collapsed MCS rate. It only measures against a peer — run `iperf3 -s`
+        # on a wired box, not on this laptop. Matters more than usual here because
+        # the MT7922 associates on 6 GHz (160 MHz wide), which penetrates walls
+        # noticeably worse than 5 GHz. Both plain Fedora 44 packages, no new repo.
+        - wavemon
+        - iperf3
         - rclone
         - fuse3                             # rclone FUSE mounts (§1)
         - fprintd
