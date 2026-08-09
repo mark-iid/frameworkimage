@@ -167,6 +167,24 @@ modules:
         # this image. Fix is a build-time chmod to 0750 root:kismet (see §1) —
         # deliberately not done yet, tracked rather than silently assumed.
         - kismet
+        # Network diagnostics that pair with the survey tools above. All checked
+        # for suid/caps the same way kismet was; findings noted per package.
+        - mtr        # continuous traceroute+ping; separates "the wifi link is bad"
+                     # from "the ISP is bad" at a glance. cap_net_raw=ep on
+                     # /usr/bin/mtr-packet — capability, not setuid root.
+        - fping      # scriptable multi-host ping, for logging loss/jitter per room
+                     # alongside the dBm reading. cap_net_raw=ep on the binary.
+        - bmon       # live per-interface throughput graphs. No suid, no caps.
+        - nmap       # LAN device discovery. No suid, no caps.
+        # wireshark-cli (tshark) — packet-level wifi debugging: retries, deauths,
+        # beacon intervals, and it reads kismet's monitor-mode captures. Included
+        # because its packaging is what kismet's should have been: /usr/bin/dumpcap
+        # is 0750 root:wireshark with cap_net_admin,cap_net_raw=ep — NOT world
+        # executable, NOT setuid root, and gated on a `wireshark` group that
+        # sysusers.d actually creates and uses. Nothing to harden here.
+        # tshark itself is plain 0755 and reads saved captures with no privilege.
+        # Live capture as non-root needs: usermod -aG wireshark <user>.
+        - wireshark-cli
         - rclone
         - fuse3                             # rclone FUSE mounts (§1)
         - fprintd

@@ -270,6 +270,22 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       These are *local* karg changes (persist across `rpm-ostree upgrade`, not baked — bootc
       `kargs.d` can only append, not remove the base `rhgb quiet`), so redo after a fresh
       reinstall. To read the full kernel log after any boot: `journalctl -b -k`.
+- [ ] **Wi-Fi capture groups.** Both `kismet` and `tshark` gate non-root packet
+      capture on a group, and the image cannot enroll you — the account is created at
+      install time, not at build time. Once, then log out and back in:
+      ```
+      sudo usermod -aG kismet,wireshark "$USER"
+      ```
+      `kismet` is needed because the build-time `kismet-suid-scope.sh` narrows the
+      capture helpers from the rpm's world-executable `4755 root:root` to
+      `4750 root:kismet`; without the group you get permission denied on the capture
+      source rather than a useful error. `wireshark` is upstream's own gating on
+      `dumpcap` (`0750 root:wireshark`) and needs no fixup from us.
+      Neither is required to *read* saved captures — `tshark -r file.pcapng` works
+      as any user. Only live capture needs the groups.
+      Note that monitor mode drops the wifi association: this laptop has one radio,
+      so a kismet capture and a working connection are mutually exclusive. Use
+      `wavemon` for signal/AP-placement work, kismet for what else is on the air.
 
 ---
 
