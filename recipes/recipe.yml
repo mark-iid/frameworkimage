@@ -159,13 +159,19 @@ modules:
   # HiDPI via seeded flatpak overrides — see files/.../factory + the tmpfiles.d C
   # rules (DESIGN §4).
   #
-  # Discord IS a flatpak again (2026-08-08). It was previously installed natively
-  # into $HOME by kb3lyb-bootstrap because zypak broke the Wayland splash->main-
-  # window handoff under niri — the client loaded but never mapped a window.
-  # Retested on the current niri + Discord flatpak and the bug is GONE: the
-  # flatpak maps a normal main window. Verified rather than assumed —
-  # `niri msg windows` showed a mapped window (App ID "discord") belonging to
-  # cgroup app-flatpak-com.discordapp.Discord-*.scope, cmdline /app/discord/Discord.
+  # Discord IS a flatpak again (2026-08-08), and it must have NO flatpak override
+  # — see the note in files/.../tmpfiles.d/kb3lyb-flatpak-overrides.conf.
+  #
+  # The "zypak breaks the Wayland splash->main-window handoff under niri" bug that
+  # justified the native tarball was never zypak. It was a stale
+  # /var/lib/flatpak/overrides/com.discordapp.Discord left over from an earlier
+  # image revision. Any override on this app — even sockets alone — puts the
+  # renderer in a segfault loop showing a stuck "Discord Updater" splash. Remove
+  # the override and it maps a normal main window, on Wayland, unaided.
+  #
+  # Bisected on the live machine rather than reasoned about: no-override works,
+  # sockets-only breaks, full override breaks, and re-applying the override to a
+  # known-good install reproduces the break on demand.
   #
   # This matters beyond tidiness: the native tarball was the only app on the
   # machine with NO sandbox at all, it self-updated by downloading and exec'ing a

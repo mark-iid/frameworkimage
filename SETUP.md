@@ -181,6 +181,18 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       Losing fingerprint-for-`sudo` is deliberate, not collateral: a fingerprint is
       not a secret, it can be lifted and it can be compelled, and this account is in
       `wheel`.
+- [ ] **Delete any `com.discordapp.Discord` flatpak override.** A machine that ran
+      an older image has a stale one in `/var/lib/flatpak/overrides/`, and the
+      tmpfiles `C` rules never remove files, only create them. It must go:
+      ```
+      sudo rm -f /var/lib/flatpak/overrides/com.discordapp.Discord
+      ```
+      With that file present Discord's renderer segfaults in a loop — the "Discord
+      Updater" splash maps and the main window never does. This, not zypak, is the
+      bug that got Discord installed as a native tarball for months. Any override
+      triggers it, including `sockets=` alone with no environment block. Without
+      one Discord runs fine on `--ozone-platform=wayland` by itself, so there is
+      nothing to gain by re-adding it.
 - [ ] **Remove the old native Discord** (only on a machine that ran the pre-
       2026-08-08 bootstrap — Discord is a flatpak again now):
       ```
