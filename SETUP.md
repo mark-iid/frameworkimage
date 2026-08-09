@@ -222,7 +222,8 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       automatically, but a machine that already has the override file keeps its
       old copy. Re-apply by hand after tightening any of them:
       ```
-      sudo flatpak override --system --nosocket=x11 com.bitwarden.desktop
+      sudo flatpak override --system --nosocket=x11 --nodevice=all --device=dri \
+        com.bitwarden.desktop
       sudo flatpak override --system --nofilesystem=home --filesystem=xdg-download \
         com.github.IsmaelMartinez.teams_for_linux
       sudo flatpak override --system --nodevice=all --device=dri --disallow=devel \

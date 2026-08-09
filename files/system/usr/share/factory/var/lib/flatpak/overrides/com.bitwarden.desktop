@@ -17,6 +17,10 @@
 # absent, and if Wayland is down under niri there is no desktop to run Bitwarden
 # in anyway.
 sockets=wayland;!x11;
+# devices=!all;dri — the manifest grants `all`: webcam, microphone, raw USB. A
+# password manager needs the GPU and nothing else on that list. Verified as a
+# --user override first: Bitwarden launches and maps its window with this applied.
+devices=!all;dri;
 
 [Environment]
 ELECTRON_OZONE_PLATFORM_HINT=auto
