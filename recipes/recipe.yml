@@ -210,9 +210,25 @@ modules:
         #     broad device access anyway, which gives up most of what the sandbox
         #     was buying — and the flatpak-override route is exactly what produced
         #     the silent, hard-to-bisect Discord breakage documented below.
-        #   * The rpm is clean: no suid, no file caps, 2.5 MB. It self-elevates
-        #     through pkexec/polkit at write time, and mate-polkit (installed in
-        #     the session stack above) is already there to serve the prompt.
+        #   * The rpm is clean: no suid, no file caps, 2.5 MB.
+        #
+        # HOW TO ACTUALLY RUN IT:  sudo -E rpi-imager
+        #
+        # -E matters: it preserves WAYLAND_DISPLAY and XDG_RUNTIME_DIR so the Qt
+        # GUI can still attach to the niri session once it is root.
+        #
+        # It does NOT elevate itself, despite carrying pkexec/polkit machinery.
+        # Launched normally it prints "Not running with elevated privileges -
+        # device access may fail" and then fails at write time with "Cannot open
+        # storage device". The rpm ships no polkit action, only a .desktop.
+        #
+        # v2.x offers an "Install Authorization" button that writes its own
+        # .policy into /usr/share/polkit-1/actions to set up automatic elevation.
+        # That CANNOT work here: /usr is read-only on ostree, so the button fails.
+        # Baking the action into the image is possible in principle, but the
+        # action id is built at runtime from a format string and is not readable
+        # from the binary, so it has not been guessed at. sudo -E is the
+        # supported fallback and is what the binary itself tells you to use.
         #
         # CARE REQUIRED WHEN USING IT: this laptop's /var/mnt/data lives on a
         # USB-attached Framework expansion card, so it shows up in rpi-imager's
