@@ -220,6 +220,34 @@ modules:
         # Picking it overwrites the volume outright — no journal replay or fsck
         # gets that back. Check the device name AND size before every write.
         - rpi-imager
+        # RAR extraction from Thunar. The plumbing was already there and only the
+        # backend was missing: thunar-archive-plugin and xarchiver both come from
+        # the sway-atomic base, xarchiver owns application/vnd.rar, and it shells
+        # out to an external tool to do the work. With no such tool installed,
+        # "Extract Here" just errors. Fedora's 7zip is not a fallback — its build
+        # carries no RAR codec (`7z i` lists none).
+        #
+        # WHICH unrar THIS RESOLVES TO MATTERS. Two repos ship a package by that
+        # name and they are not the same software:
+        #
+        #   unrar-0.3.3  Fedora          GPL-2.0-or-later, a wrapper for unrar-free
+        #   unrar-7.1.7  RPM Fusion      RARLAB's own, full RAR5 support
+        #                nonfree         ("Freeware with further limitations")
+        #
+        # Both provide /usr/bin/unrar, and 7.1.7 > 0.3.3, so version comparison
+        # picks RPM Fusion's — verified with `dnf repoquery --latest-limit 1`.
+        # That only holds because the codecs module runs FIRST and installs
+        # rpmfusion-{free,nonfree}-release persistently (both are in the built
+        # image, with their repo files enabled), so this module inherits them.
+        # Reorder the modules so codecs no longer comes first and this silently
+        # degrades to the unrar-free wrapper rather than failing the build —
+        # check with `rpm -q unrar` on the machine, which should say 7.1.7.
+        #
+        # Nonfree, deliberately, and consistent with the codecs already layered
+        # from the same repo. `unar` (LGPL, Fedora, multi-format) is the free
+        # alternative and xarchiver knows how to drive it, but it is the weaker
+        # option for RAR specifically.
+        - unrar
         - rclone
         - fuse3                             # rclone FUSE mounts (§1)
         - fprintd
