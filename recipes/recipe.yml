@@ -185,6 +185,22 @@ modules:
         # tshark itself is plain 0755 and reads saved captures with no privilege.
         # Live capture as non-root needs: usermod -aG wireshark <user>.
         - wireshark-cli
+        # Storage health: SMART attributes, wear level, self-tests. No suid and no
+        # file caps — smartctl just needs sudo, which is correct for something
+        # issuing raw ATA/SCSI passthrough.
+        #
+        # The rpm also ships smartd.service; it is deliberately NOT enabled in the
+        # systemd module below. smartd's default failure action is to mail root,
+        # and there is no MTA on this machine, so alerts would go nowhere and read
+        # as "monitored" while being silently dropped. Wiring it to mako instead
+        # needs a custom -M exec script; do that deliberately or not at all.
+        #
+        # For the USB expansion card specifically, SMART has to be tunnelled
+        # through the bridge: `sudo smartctl -a -d sat /dev/sda`, falling back to
+        # `-d scsi`. Plenty of USB bridges pass no SMART at all, so this may
+        # legitimately return nothing useful for /var/mnt/data — internal nvme0n1
+        # needs no -d flag and always works.
+        - smartmontools
         - rclone
         - fuse3                             # rclone FUSE mounts (§1)
         - fprintd
