@@ -354,6 +354,15 @@ modules:
         - kb3lyb-power-profile.timer   # auto power profile: perf on AC, balanced on
                                        # battery, power-saver <20% (files/.../usr/bin
                                        # + udev rule + polkit rule)
+        - kb3lyb-usb-retrain.service   # warm reboots leave the Framework expansion
+                                       # card on the USB 2.0 companion port (480 Mb/s
+                                       # vs 10 Gb/s) ~3 boots in 4; cold boots never
+                                       # do. Power-cycles the hub port to force a
+                                       # SuperSpeed retrain. Ordered BEFORE
+                                       # systemd-cryptsetup@data.service — that
+                                       # ordering is the safety mechanism, since
+                                       # yanking the port under the mounted ext4
+                                       # corrupts its journal. No-ops on cold boots.
       disabled:
         - sddm.service
     user:
