@@ -201,6 +201,25 @@ modules:
         # legitimately return nothing useful for /var/mnt/data — internal nvme0n1
         # needs no -d flag and always works.
         - smartmontools
+        # rpi-imager — SD card / USB writer for Raspberry Pi images. A DELIBERATE
+        # §8.5 exception: that section prefers flatpaks for GUI apps, and this one
+        # is layered native, for the same class of reason Evolution is.
+        #
+        #   * Fedora ships 2.0.6; Flathub is still on 1.9.6.
+        #   * It writes RAW BLOCK DEVICES. Sandboxing it would mean granting
+        #     broad device access anyway, which gives up most of what the sandbox
+        #     was buying — and the flatpak-override route is exactly what produced
+        #     the silent, hard-to-bisect Discord breakage documented below.
+        #   * The rpm is clean: no suid, no file caps, 2.5 MB. It self-elevates
+        #     through pkexec/polkit at write time, and mate-polkit (installed in
+        #     the session stack above) is already there to serve the prompt.
+        #
+        # CARE REQUIRED WHEN USING IT: this laptop's /var/mnt/data lives on a
+        # USB-attached Framework expansion card, so it shows up in rpi-imager's
+        # target list right next to the SD card, ~1TB and full of real data.
+        # Picking it overwrites the volume outright — no journal replay or fsck
+        # gets that back. Check the device name AND size before every write.
+        - rpi-imager
         - rclone
         - fuse3                             # rclone FUSE mounts (§1)
         - fprintd
