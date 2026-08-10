@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  System default for the Thunar xfconf channel.
+
+  Thunar 4.20 will not run an executable .sh from the file manager unless
+  misc-exec-shell-scripts-by-default is true; unset defaults to false, so
+  double-clicking a script that already has +x does nothing useful.
+
+  xfconf reads channel defaults from $XDG_CONFIG_DIRS as well as
+  $XDG_CONFIG_HOME, so dropping the channel XML here makes this the default for
+  every account on the machine while a per-user
+  ~/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml still wins if one exists.
+  That ordering matters: this sets the default, it does not override a choice
+  already made in the GUI.
+
+  Note this only affects scripts that ALREADY carry the executable bit — it is
+  not a blanket "run anything I click on". Thunar still refuses non-executable
+  files, so the +x bit remains the thing that grants execution.
+-->
+
+<channel name="thunar" version="1.0">
+  <property name="misc-exec-shell-scripts-by-default" type="bool" value="true"/>
+</channel>

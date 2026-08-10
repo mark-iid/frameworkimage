@@ -1,0 +1,33 @@
+[Desktop Entry]
+Version=1.0
+Type=X-XFCE-Helper
+Name=Ghostty
+Icon=utilities-terminal
+StartupNotify=true
+
+# XFCE "preferred application" helper for ghostty, so that Thunar's
+# Open Terminal Here works.
+#
+# Thunar does not spawn a terminal itself — it calls
+# `exo-open --launch TerminalEmulator`, and exo resolves that category through
+# helper definitions in /usr/share/xfce4/helpers. Those files are shipped by the
+# xfce4-settings package, which is NOT installed here (this is a niri image, not
+# an XFCE one; Thunar comes from the sway-atomic base). With that directory empty
+# exo has nothing to fall back to at all, which is the
+# "Could not find fallback TerminalEmulator application" dialog.
+#
+# Installing xfce4-settings would not actually fix it: upstream ships helpers for
+# alacritty and kitty but none for ghostty or foot, so the 8.4 MB of XFCE settings
+# daemon would buy a list that still does not contain this machine's terminal.
+# Shipping this one file is smaller and lands on the right answer (DESIGN §1, §2 —
+# ghostty is the primary terminal).
+#
+# %B expands to the first entry in X-XFCE-Binaries that is found on $PATH.
+# `-e <command>` is ghostty's documented flag for running a command inside the
+# terminal (verified against `ghostty --help`), which is what exo needs for the
+# with-parameter form. The bare form inherits the caller's working directory,
+# which is what makes "Open Terminal Here" land in the right folder.
+X-XFCE-Binaries=ghostty;
+X-XFCE-Category=TerminalEmulator
+X-XFCE-Commands=%B;
+X-XFCE-CommandsWithParameter=%B -e %s;
