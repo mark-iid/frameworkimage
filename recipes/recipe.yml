@@ -264,6 +264,33 @@ modules:
         # alternative and xarchiver knows how to drive it, but it is the weaker
         # option for RAR specifically.
         - unrar
+        # C/C++ toolchain. The image had NO compiler at all — no cc, gcc, clang,
+        # make, ld — which is a bigger hole than it looks:
+        #
+        #   * C is one of the languages this machine is actually used for.
+        #   * nvim-treesitter COMPILES its parsers, so with no cc it silently
+        #     degrades every language to no syntax highlighting, indentation or
+        #     structural selection ("Unmet requirements for nvim-treesitter: ❌ C
+        #     compiler"). That is how this was found.
+        #   * Mason (the Neovim LSP/DAP installer, in $HOME per §2) builds some of
+        #     its tools from source and fails the same way.
+        #
+        # In the image rather than brew because a compiler is a system capability,
+        # not a per-user tool — the §2 split puts language runtimes and personal
+        # tooling in $HOME, but the toolchain they all build against belongs here.
+        #
+        # clang-tools-extra is what provides /usr/bin/clangd, the C language server
+        # (verified with `dnf repoquery --whatprovides`), so it earns its place
+        # beyond just being a second compiler. gdb covers debugging; nvim-dap
+        # drives it for both C and, via java-debug, Java.
+        - gcc
+        - gcc-c++
+        - make
+        - cmake
+        - ninja-build
+        - pkgconf
+        - clang-tools-extra           # clangd — C/C++ language server
+        - gdb
         - rclone
         - fuse3                             # rclone FUSE mounts (§1)
         - fprintd
