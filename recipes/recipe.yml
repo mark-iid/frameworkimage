@@ -291,6 +291,14 @@ modules:
         - pkgconf
         - clang-tools-extra           # clangd — C/C++ language server
         - gdb
+        # nmtui — curses front end for NetworkManager. In the image rather than
+        # brew because it configures the SYSTEM NetworkManager, so it belongs
+        # beside network-manager-applet above rather than in $HOME (§2).
+        # Earns its place as the fallback path: when niri/waybar are not up, or
+        # the applet is not cooperating, this is how wifi gets fixed from a bare
+        # console — which is exactly the situation the AP survey work kept
+        # landing in.
+        - NetworkManager-tui
         - rclone
         - fuse3                             # rclone FUSE mounts (§1)
         - fprintd
