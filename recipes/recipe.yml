@@ -299,6 +299,19 @@ modules:
         # console — which is exactly the situation the AP survey work kept
         # landing in.
         - NetworkManager-tui
+        # restic — backups to the TrueNAS (nas1.crosscreek). In the IMAGE and not
+        # brew on purpose: you need it in a recovery shell, before $HOME (and
+        # therefore brew) exists. That is the one moment it actually matters.
+        #
+        # Chosen over borgbackup, which is also packaged: borg wants a borg binary
+        # on the far end, which is awkward on TrueNAS SCALE. restic drives the
+        # stock SFTP subsystem (already enabled there) with no server-side agent,
+        # and encrypts client-side so the NAS only ever holds opaque blobs.
+        #
+        # Driver script + timer are in the dotfiles (bin/kb3lyb-backup), not here:
+        # they reference $HOME paths and a password file, so they belong on the §2
+        # $HOME side of the split.
+        - restic
         - rclone
         - fuse3                             # rclone FUSE mounts (§1)
         - fprintd
