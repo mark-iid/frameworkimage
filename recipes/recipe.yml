@@ -465,15 +465,28 @@ modules:
         - kb3lyb-power-profile.timer   # auto power profile: perf on AC, balanced on
                                        # battery, power-saver <20% (files/.../usr/bin
                                        # + udev rule + polkit rule)
-        - kb3lyb-usb-retrain.service   # warm reboots leave the Framework expansion
-                                       # card on the USB 2.0 companion port (480 Mb/s
-                                       # vs 10 Gb/s) ~3 boots in 4; cold boots never
-                                       # do. Power-cycles the hub port to force a
-                                       # SuperSpeed retrain. Ordered BEFORE
-                                       # systemd-cryptsetup@data.service — that
-                                       # ordering is the safety mechanism, since
-                                       # yanking the port under the mounted ext4
-                                       # corrupts its journal. No-ops on cold boots.
+      # kb3lyb-usb-retrain.service was here and is REMOVED. Do not reintroduce it
+      # without reading this. It power-cycled the expansion card's hub port on boot
+      # to force a SuperSpeed retrain when a warm reboot had left it at 480 Mb/s.
+      # It failed on both counts the first time it actually fired:
+      #
+      #   1. IT DID NOT WORK. The toggle ran cleanly — sysfs write permitted, port
+      #      cycled, card re-enumerated — and the link came back at 480 anyway
+      #      ("still 480 Mb/s after the toggle; giving up"). A port power-cycle is
+      #      not equivalent to a physical reseat, and the reseat is what actually
+      #      fixed this. The premise was wrong.
+      #
+      #   2. IT BROKE THE MOUNT. Ordered Before=systemd-cryptsetup@data.service, it
+      #      took 25s (10s waiting for the card + 2s toggle + 15s waiting for the
+      #      retrain). /etc/fstab carries x-systemd.device-timeout=10s for
+      #      /var/mnt/data, and that clock runs independently: the device job timed
+      #      out at 21:19:57, sixteen seconds BEFORE cryptsetup started at 21:20:13.
+      #      With nofail the mount then stayed dead silently, leaving the Nextcloud
+      #      client pointed at an empty sync folder — the exact condition the backup
+      #      guard exists to catch.
+      #
+      # The real fix for a 480 Mb/s link is to reseat the card. Since doing that,
+      # warm reboots have trained SuperSpeed on their own.
       disabled:
         - sddm.service
     user:
