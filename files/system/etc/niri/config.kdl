@@ -125,6 +125,13 @@ binds {
     Mod+F       { maximize-column; }
     Mod+Shift+F { fullscreen-window; }
 
+    // Escape hatch for X11 apps that fullscreen themselves. SDL/Ren'Py games set
+    // _NET_WM_STATE_FULLSCREEN on their own window and re-assert it, so the
+    // fullscreen-window bind above flips niri's flag and the client stomps it back.
+    // wmctrl clears the property on the X side instead. DISPLAY :0 comes from the
+    // environment block above, so this reaches xwayland-satellite's server.
+    Mod+Shift+X { spawn "wmctrl" "-r" ":ACTIVE:" "-b" "remove,fullscreen"; }
+
     // Screenshots.
     Print       { screenshot; }
     Ctrl+Print  { screenshot-screen; }

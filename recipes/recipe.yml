@@ -30,6 +30,16 @@ modules:
         # compositor + XWayland
         - niri
         - xwayland-satellite
+        # wmctrl — EWMH control for Xwayland clients. X11 apps that manage their
+        # own fullscreen (SDL/Ren'Py games in particular) set _NET_WM_STATE_FULLSCREEN
+        # on themselves and re-assert it, so niri's own `fullscreen-window` toggles
+        # the compositor flag and the client stomps it right back — the window stays
+        # pinned to the full output, covering the bar. `wmctrl -r :ACTIVE: -b
+        # remove,fullscreen` clears the property directly, which works even when the
+        # app has stopped consuming input and its own toggle (f / Alt+Enter / F11)
+        # does nothing. xprop can read that state but cannot send the client message
+        # needed to change it, hence a separate tool.
+        - wmctrl
         # greeter
         - greetd
         - tuigreet
