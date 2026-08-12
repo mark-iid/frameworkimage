@@ -184,4 +184,33 @@ if command -v gsettings >/dev/null; then
   gsettings set org.gnome.desktop.interface gtk-theme Adwaita-dark    || warn "could not set gtk-theme"
 fi
 
+# --- 7. $HOME convenience links ------------------------------------------------
+# ~/Nextcloud -> the sync folder on the data drive. The Nextcloud client syncs into
+# /var/mnt/data/nextcloud (the 1TB expansion card), not $HOME, so this is just a
+# short path to it, sitting beside OneDrive-InstrumentalID and the XDG dirs.
+#
+# Points at /var/mnt/data/... deliberately rather than /mnt/data/...: /mnt is itself
+# a symlink to var/mnt, and a symlink-through-a-symlink resolves inconsistently
+# across tools.
+#
+# Created even when the drive is not mounted, which it usually will not be on a
+# fresh install. A dangling link is the RIGHT failure mode here: it heals by itself
+# once the volume mounts, and until then anything following it gets a clear ENOENT
+# instead of silently seeing an empty directory — which is precisely the state that
+# nearly had the Nextcloud client propagate local deletions to the server (SETUP §6).
+nc_target="/var/mnt/data/nextcloud"
+nc_link="$HOME/Nextcloud"
+if [[ -L "$nc_link" ]]; then
+  nc_current="$(readlink "$nc_link")"
+  [[ "$nc_current" == "$nc_target" ]] \
+    || warn "$nc_link already points at $nc_current, not $nc_target — leaving it alone"
+elif [[ -e "$nc_link" ]]; then
+  warn "$nc_link exists and is not a symlink — refusing to replace it"
+else
+  say "linking $nc_link -> $nc_target"
+  ln -s "$nc_target" "$nc_link" || warn "could not create $nc_link"
+  [[ -e "$nc_target" ]] \
+    || warn "  target not present yet (data drive unmounted) — the link resolves once it is"
+fi
+
 say "bootstrap complete. Open a new shell (zsh) to pick up the environment."
