@@ -213,4 +213,30 @@ else
     || warn "  target not present yet (data drive unmounted) — the link resolves once it is"
 fi
 
+# --- 8. user timers ------------------------------------------------------------
+# Stowing a .timer only puts the unit in place; something still has to enable it.
+# That intent lives here rather than as a committed timers.target.wants/ symlink
+# in the dotfiles: systemd owns that directory and rewrites it behind your back
+# (a `disable` shows up as a repo deletion), and the links it writes hardcode an
+# absolute $HOME path that only resolves for one username.
+#
+# Only units that are enabled deliberately belong here. rclone-onedrive-iid is
+# left disabled on purpose, and swayidle/graphical-session-bind are static —
+# no [Install] section, pulled in by the units that need them.
+#
+# Idempotent: enabling an already-enabled unit is a no-op.
+if systemctl --user show-environment >/dev/null 2>&1; then
+  say "enabling user timers"
+  systemctl --user daemon-reload || warn "daemon-reload failed; unit files may be stale"
+  for unit in kb3lyb-backup.timer; do
+    if systemctl --user enable --now "$unit" >/dev/null 2>&1; then
+      echo "    enabled $unit"
+    else
+      warn "could not enable $unit (is it stowed into $HOME/.config/systemd/user?)"
+    fi
+  done
+else
+  warn "no user systemd session; skipping timer enable (re-run this from a desktop login)"
+fi
+
 say "bootstrap complete. Open a new shell (zsh) to pick up the environment."
