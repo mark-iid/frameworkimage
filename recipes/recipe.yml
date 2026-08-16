@@ -434,8 +434,11 @@ modules:
   #
   # Running last makes our copy authoritative regardless. It must still come
   # BEFORE the `systemd` module below, which enables unit files that this module
-  # is what installs (kb3lyb-power-profile.timer, flatpak-update.timer,
-  # kb3lyb-console-font.service).
+  # is what installs (kb3lyb-power-profile.timer, kb3lyb-console-font.service).
+  # Note the flatpak/brew units are NOT among those: they live in files/systemd/
+  # and are installed by the `systemd` module itself, not from here. What this
+  # module does supply for them is /usr/bin/kb3lyb-flatpak-update, the wrapper
+  # both flatpak units exec — so the ordering requirement is the same either way.
   - type: files
     files:
       - source: system
@@ -459,9 +462,23 @@ modules:
   # enabling would error; PAM starts it on demand once with-fingerprint is set.
   #
   # Update strategy (§5): rpm-ostreed-automatic stages OS updates (policy=stage in
-  # /etc/rpm-ostreed.conf), flatpak-update.timer refreshes SYSTEM flatpaks (system,
-  # not user — a user flatpak update would hit polkit and stall), and the per-user
+  # /etc/rpm-ostreed.conf), flatpak-update.timer refreshes SYSTEM flatpaks,
+  # flatpak-update-user.timer refreshes USER-scope ones, and the per-user
   # brew-upgrade.timer keeps $HOME brew current. Together these replace Aurora's uupd.
+  #
+  # There used to be no user-scope flatpak timer here, on the stated grounds that
+  # "a user flatpak update would hit polkit and stall". That is wrong, and it cost
+  # us: the runtimes installed at user scope (Mesa GL x2, codecs-extra, plus
+  # whatever gets added alongside org.gnome.seahorse.Application above) were never
+  # updated by anything and simply accumulated as permanently-pending. Polkit only
+  # guards the SYSTEM installation; a --user update writes solely to
+  # ~/.local/share/flatpak and needs no authorisation. Verified 2026-08-16 under
+  # `systemd-run --user`: exit 0, no prompt. It must stay a USER unit for that to
+  # hold — a system unit dropping to the user would reintroduce the problem.
+  #
+  # Both flatpak timers run through /usr/bin/kb3lyb-flatpak-update rather than
+  # calling `flatpak update` directly, because the bare command reports success
+  # while doing nothing in two distinct situations. See that script's header.
   - type: systemd
     system:
       enabled:
@@ -502,5 +519,6 @@ modules:
     user:
       enabled:
         - brew-upgrade.timer
+        - flatpak-update-user.timer
 
   - type: signing

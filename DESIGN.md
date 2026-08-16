@@ -172,13 +172,37 @@ limitation given HDMI is only used for presenting.
   flow through without any action.
 - On the host: enable `rpm-ostreed-automatic.timer` with the staging policy.
   There is no software center and no `uupd` on this base, so also add timers for
-  `flatpak update` (system scope) and `brew upgrade`. All three were previously
+  `flatpak update` and `brew upgrade`. All three were previously
   handled by Aurora's uupd in one unit; their absence will be noticed on day two.
   `flatpak-update.timer` runs `OnCalendar=daily` **and** `OnBootSec=3min`: this is
   a laptop that's often off overnight, and `Persistent=true` only re-runs a
   *missed* daily slot, not one that already ran earlier today — so updates that
   land on Flathub after that run would otherwise wait for the next midnight the
   machine happens to be on. The boot trigger closes that gap.
+- **Both flatpak scopes need a timer.** `flatpak-update.timer` (system) is paired
+  with a user-scope `flatpak-update-user.timer`. For a long time only the system
+  one existed, on the mistaken grounds that a user-scope update would stall on
+  polkit — so the runtimes under `~/.local/share/flatpak` were updated by nothing
+  at all and simply accumulated as permanently-pending. Polkit only guards the
+  *system* installation. Keep the user one a **user** unit; a system unit dropping
+  privileges would genuinely hit polkit and reintroduce the original bug.
+- **Neither timer may call `flatpak update` directly.** Both exec
+  `/usr/bin/kb3lyb-flatpak-update <scope>`, because the bare command reports
+  success while updating nothing in two distinct ways:
+  - It treats an unreadable remote as *non-fatal* for already-installed refs —
+    one "No such ref … in remote flathub" warning per ref, then "Nothing to
+    update.", then **exit 0**. No `SuccessExitStatus` policy can catch this,
+    because the exit code genuinely is 0.
+  - `Persistent=true` fires the missed daily slot the instant the laptop wakes,
+    ahead of wifi association. Observed 2026-08-16: resume 13:55:40, NM still
+    `CONNECTED_LOCAL` at :41, flatpak ran and gave up at :41. `network-online.target`
+    does **not** help — it was satisfied at boot and is not re-armed across suspend.
+
+  The wrapper waits for real connectivity (`nm-online`), retries a metadata-blind
+  run with backoff, and exits nonzero if every attempt came back blind. It
+  distinguishes "blind" (most installed refs unresolvable) from an app
+  legitimately delisted from Flathub (one or two), so a delisting doesn't pin the
+  unit permanently red.
 - Before any major version rebase, run `ostree admin pin 0` so a known-good
   deployment survives repeated reboots.
 - BlueBuild publishes timestamped tags alongside `latest`. Rolling back to a
