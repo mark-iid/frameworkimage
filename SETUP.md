@@ -286,6 +286,25 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       Note that monitor mode drops the wifi association: this laptop has one radio,
       so a kismet capture and a working connection are mutually exclusive. Use
       `wavemon` for signal/AP-placement work, kismet for what else is on the air.
+- [ ] **Serial port group (`dialout`).** Same class of per-machine step as the
+      capture groups above — the image can create the group but cannot enroll an
+      account that does not exist yet at build time. Once, then log out and back in:
+      ```
+      sudo usermod -aG dialout "$USER"
+      ```
+      `/usr/lib/udev/rules.d/50-udev-default.rules:47` puts every `tty[A-Z]*[0-9]`
+      device — `ttyACM*` (Flipper Zero, ESP32, Klipper host) and `ttyUSB*` (FTDI/CP210x
+      cables, radio CAT control) — at `0660 root:dialout`. Without the group you get
+      permission denied on open.
+      This persists across image updates: `dialout` (GID 18) comes from `/usr/lib/group`
+      in the image, but the *membership* is written to `/etc/group`, which is machine
+      state on bootc, not part of the image. Redo it after a fresh reinstall only.
+      **Still needed even for the Flipper**, which has its own baked udev rule
+      (`files/system/etc/udev/rules.d/70-flipper-zero.rules`) granting the device node
+      via `uaccess`: `picocom` writes a UUCP lockfile into `/run/lock/picocom`, which
+      is `0775 root:dialout`, so it fails at startup rather than at open. The rule and
+      the group cover two different things — read both before concluding either is
+      redundant.
 
 ---
 

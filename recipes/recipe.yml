@@ -211,6 +211,31 @@ modules:
         # legitimately return nothing useful for /var/mnt/data — internal nvme0n1
         # needs no -d flag and always works.
         - smartmontools
+        # picocom — serial console for USB CDC-ACM gadgets: the Flipper Zero's
+        # `?` shell, ESP32/Arduino boards, the Klipper host's console.
+        #   picocom -b 115200 /dev/ttyACM0     (exit: C-a C-x)
+        #
+        # In the image rather than brew because it pairs with the baked udev
+        # rule below and is wanted from a bare console, before $HOME exists —
+        # the same argument restic gets further down. Chosen over minicom
+        # (config-file oriented, wants a setup pass before it talks) and screen
+        # (a terminal multiplexer that also does serial; neither is in the base).
+        #
+        # The binary is clean: 0755 root:root, no suid, no file caps.
+        #
+        # BUT it is not privilege-free. It ships /usr/lib/sysusers.d/picocom.conf
+        # (`g dialout 18`) and a lock directory /run/lock/picocom at 0775
+        # root:dialout, where it writes a UUCP lockfile on every connect. So
+        # `dialout` membership is required EVEN THOUGH files/system/etc/udev/
+        # rules.d/70-flipper-zero.rules grants the device node itself via
+        # uaccess — the udev rule covers the tty, the group covers the lockfile.
+        # Without the group picocom fails at startup, not at open time, which
+        # reads as a broken cable rather than a permissions problem.
+        #
+        # Per-machine follow-up, same shape as the kismet/wireshark groups and
+        # for the same reason (the account is created at install time, not at
+        # build time):  sudo usermod -aG dialout "$USER"   — see SETUP.md §6.
+        - picocom
         # rpi-imager — SD card / USB writer for Raspberry Pi images. A DELIBERATE
         # §8.5 exception: that section prefers flatpaks for GUI apps, and this one
         # is layered native, for the same class of reason Evolution is.
