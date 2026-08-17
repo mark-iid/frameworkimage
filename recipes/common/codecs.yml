@@ -19,6 +19,21 @@
 #     NVIDIA path). Only mesa-va-drivers-freeworld / mesa-vulkan-drivers-freeworld
 #     exist. VA-API is what matters on this AMD APU.
 modules:
+  # Fetch the two rpmfusion-*-release RPMs ourselves first, with retries and a
+  # fallback to RPM Fusion's origin host. The dnf module below still declares
+  # `repos: {nonfree: rpmfusion}` and MUST keep doing so — its enable_rpmfusion
+  # is guarded on `rpm -q rpmfusion-free-release`, so pre-seeding turns the
+  # download into a no-op while leaving the rest of its repo setup (notably
+  # enabling fedora-cisco-openh264) in place. See the script for the full why.
+  #
+  # This is here because librepo gives each mirror one 30 s connect timeout and
+  # no backoff, and this module is FIRST in the build — so one slow mirror took
+  # down the whole image on 2026-08-17 (run 32074991347) before a single
+  # package was even considered.
+  - type: script
+    scripts:
+      - rpmfusion-release-retry.sh
+
   - type: dnf
     repos:
       nonfree: rpmfusion
