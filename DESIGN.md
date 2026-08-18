@@ -278,11 +278,31 @@ only ever covered the powered-off case.
 
 **Resolved 2026-08-08 by scoping the fingerprint instead of the keyring.** The
 global authselect `with-fingerprint` feature is no longer enabled; `pam_fprintd`
-is wired into `/etc/pam.d/gtklock` alone. Login and `sudo` take a password, so
-`pam_unix` runs and the keyring is properly encrypted and auto-unlocked; the
-screen lock — the case you actually hit dozens of times a day — still takes the
-finger. Fingerprint-for-`sudo` is given up deliberately: a fingerprint is not a
-secret, it can be lifted and compelled, and this account is in `wheel`.
+is wired into `/etc/pam.d/gtklock` alone. Login takes a password, so `pam_unix`
+runs and the keyring is properly encrypted and auto-unlocked; the screen lock —
+the case you actually hit dozens of times a day — still takes the finger.
+
+**Extended 2026-08-18 to cover `sudo`.** The earlier text here said
+fingerprint-for-`sudo` was "given up deliberately" because a fingerprint is not a
+secret and can be lifted or compelled. That was not mark's decision and does not
+reflect his preference, so it is recorded correctly now: he is fine with the
+finger for `sudo`.
+
+It was also a conflation. The keyring breakage is specific to the **login** path —
+`sufficient` short-circuits `pam_unix`, so no password token is captured — and
+`sudo` never unlocked the login keyring in the first place. What made the cost
+unavoidable was the *mechanism*, not `sudo`: `authselect enable-feature
+with-fingerprint` writes into `system-auth`, which greetd, `sudo` and polkit all
+include, so it cannot be had for one without the others. Scoping directly to
+`/etc/pam.d/sudo` has no such coupling. See `files/scripts/sudo-fingerprint.sh`.
+
+That script edits the packaged file in place rather than baking a replacement,
+because `/etc/pam.d/sudo` is an rpm `%config` file (`rpm -qc sudo` lists it) —
+unlike `/etc/pam.d/gtklock`, which its package ships unmarked. Shipping our own
+full copy would silently pin the `sudo` PAM stack against future Fedora changes.
+polkit is untouched and still prompts for the password. Remote `sudo` over SSH
+will reach for the reader and fall back to the password after a timeout; the
+`pam_succeed_if`-guarded variant was considered and not taken.
 
 The locker was chosen as the one wired-in spot for a specific reason: its failure
 mode is benign. Anything wrong in `/etc/pam.d/gtklock` costs you a typed password

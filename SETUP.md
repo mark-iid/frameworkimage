@@ -173,14 +173,33 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       sudo authselect apply-changes
       grep pam_fprintd /etc/pam.d/system-auth || echo "clear — fingerprint is out of system-auth"
       ```
-      After this: login and `sudo` want your password; the screen lock still takes
-      your finger (via the baked `/etc/pam.d/gtklock`, which arrives with the image
-      — check it is present before running the above, or you lose the finger at the
-      locker too until you reboot into the new deployment).
+      After this: login wants your password; the screen lock still takes your finger
+      (via the baked `/etc/pam.d/gtklock`, which arrives with the image — check it is
+      present before running the above, or you lose the finger at the locker too
+      until you reboot into the new deployment).
 
-      Losing fingerprint-for-`sudo` is deliberate, not collateral: a fingerprint is
-      not a secret, it can be lifted and it can be compelled, and this account is in
-      `wheel`.
+      `sudo` also takes the finger, as of 2026-08-18. That is NOT the global feature
+      coming back — it is `files/scripts/sudo-fingerprint.sh` inserting one line into
+      `/etc/pam.d/sudo` at build time. The global feature stays off because it writes
+      into `system-auth`, which login includes; scoping to the `sudo` file alone has
+      no effect on login or the keyring. polkit still prompts for the password.
+
+      Unlike `/etc/authselect` above, this one should reach an existing machine on
+      its own: `/etc/pam.d/sudo` is unmodified locally, so rpm-ostree's `/etc` merge
+      takes the new default. Verify after rebooting into a deployment built on or
+      after 2026-08-18:
+      ```
+      head -3 /etc/pam.d/sudo        # expect: auth sufficient pam_fprintd.so
+      sudo -k && sudo true           # should ask for the finger
+      ```
+      If the line is missing, the local file diverged at some point and rpm-ostree is
+      keeping your copy — add the line by hand, or `rm` it and reboot to take the
+      deployment's version.
+
+      Needs `fprintd-enroll` to have been run for the account (§6 above). If it has
+      not, or fprintd is down, `sudo` falls through to the password — it cannot lock
+      you out. Remote `sudo` over SSH will ask for a finger you cannot provide and
+      fall back to the password after a timeout; that is accepted, not a bug.
 - [ ] **Delete any `com.discordapp.Discord` flatpak override.** A machine that ran
       an older image has a stale one in `/var/lib/flatpak/overrides/`, and the
       tmpfiles `C` rules never remove files, only create them. It must go:

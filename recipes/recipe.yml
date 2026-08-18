@@ -480,6 +480,14 @@ modules:
       # script hard-fails if kismet is absent rather than silently no-opping.
       # Needs a per-machine follow-up: usermod -aG kismet <user>.
       - kismet-suid-scope.sh
+      # Allow the finger for `sudo` — and only sudo. Pairs with the script above
+      # it: that one keeps the GLOBAL authselect feature off (it would put
+      # pam_fprintd in system-auth and break the login keyring), this one adds
+      # back the one place the finger is wanted without that cost. Must come
+      # after the dnf module that installs fprintd-pam; the script hard-fails if
+      # pam_fprintd.so is absent rather than shipping a silent no-op.
+      # Per-user enrollment stays a runtime step: fprintd-enroll.
+      - sudo-fingerprint.sh
 
   # Display manager: base SDDM -> greetd. Plus tailscaled (§2) and the auto-update
   # timers (§5). Unit files for the flatpak/brew timers live in files/systemd/.

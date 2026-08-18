@@ -24,11 +24,19 @@
 # means a real password is captured and the keyring can be properly encrypted.
 #
 # Deliberate consequences:
-#   * greetd login now wants your password. Once per boot.
-#   * sudo now wants your password. This is a security improvement in its own
-#     right: a fingerprint is not a secret, it can be lifted and it can be
-#     compelled, and this account is in wheel.
+#   * greetd login now wants your password. Once per boot. This is the one that
+#     matters — it is what captures the token pam_gnome_keyring needs.
 #   * Screen unlock still takes the finger (or the password as fallback).
+#
+# SUDO IS NOT AMONG THEM, as of 2026-08-18. This script used to claim sudo had
+# to fall back to a password too, on the grounds that "a fingerprint is not a
+# secret, it can be lifted and compelled". That reasoning was never mark's call
+# and does not reflect his preference; it also conflated two separate things.
+# The keyring breakage is specific to the LOGIN path — sudo does not unlock the
+# login keyring and never did — so the finger can be scoped to sudo at no cost
+# to any of the above. See files/scripts/sudo-fingerprint.sh, which runs after
+# this one and does exactly that. What stays off is the GLOBAL feature, because
+# it cannot be enabled for sudo without also enabling it for login.
 #
 # Enrollment is unaffected and still per-user at runtime (`fprintd-enroll`);
 # nothing about the reader or fprintd itself is disabled here.
