@@ -369,6 +369,46 @@ modules:
         - evolution
         - evolution-ews
 
+  # fsv — the 3D file system visualizer, i.e. the Jurassic Park file manager.
+  # The one thing in this image COMPILED FROM SOURCE, because there is nothing to
+  # install: no Fedora package, no Flathub app, no COPR (all checked 2026-08-20).
+  # Upstream is jabl/fsv, the live GTK3 + OpenGL 3.1 fork of the dead 1999
+  # original; files/scripts/fsv-build.sh carries the full why, including the three
+  # upstream bugs it works around and why `ninja install` is deliberately not used.
+  #
+  # The packages below are fsv's RUNTIME libraries, and all four are already in
+  # the base image today. Declaring them anyway is not redundant, for two reasons:
+  #
+  #   * The build script installs gtk3-devel and friends and then removes exactly
+  #     the set it added. Naming these here marks them user-installed, so no
+  #     removal — its own or a later one — can take them out from under fsv.
+  #   * A base-image bump that dropped one would otherwise give a green build
+  #     containing an fsv that cannot start. Listed here, it fails the build.
+  #
+  # gdk-pixbuf2-modules-extra is the one that looks gratuitous and is not: every
+  # toolbar button and file-type glyph in fsv is an XPM compiled into the binary,
+  # and that subpackage owns gdk-pixbuf's XPM loader. Without it fsv still runs,
+  # but with no icons at all and a screenful of loader warnings.
+  - type: dnf
+    install:
+      packages:
+        - gtk3
+        - libepoxy
+        - gdk-pixbuf2
+        - gdk-pixbuf2-modules-extra
+
+  # Must run after the dnf module directly above (runtime libs) AND after the
+  # toolchain block further up (gcc, ninja-build, pkgconf). The script asserts all
+  # of them and hard-fails rather than silently no-opping if the order ever
+  # changes — same reasoning as kismet-suid-scope.sh below.
+  #
+  # Installs /usr/bin/fsv, /usr/share/pixmaps/fsv.xpm and a .desktop entry. None
+  # of those paths is owned by an rpm, so unlike the config in files/system this
+  # has no ordering relationship with the `files` module.
+  - type: script
+    scripts:
+      - fsv-build.sh
+
   # GUI apps as flatpaks (DESIGN §8.5: prefer $HOME/flatpak over layering/overrides).
   # Electron apps (slack/bitwarden/discord) are forced onto native Wayland for sharp
   # HiDPI via seeded flatpak overrides — see files/.../factory + the tmpfiles.d C
