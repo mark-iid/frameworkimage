@@ -172,10 +172,21 @@ modules:
         # it. Only the niche ones (_sdr_*, _radiacode_usb, _serial_radview,
         # _freaklabs_zigbee) are 0104550 root:root, i.e. root-only. So installing
         # this hands every local uid a setuid-root NIC-manipulation binary.
-        # Single-user laptop, so the blast radius is small, but it is a real
-        # widening of the suid surface and is NOT mitigated by anything already in
-        # this image. Fix is a build-time chmod to 0750 root:kismet (see §1) —
-        # deliberately not done yet, tracked rather than silently assumed.
+        #
+        # MITIGATED AT BUILD TIME by files/scripts/kismet-suid-scope.sh, in the
+        # script module near the bottom of this file: the world-executable helpers
+        # are rewritten to 4750 root:kismet — setuid PRESERVED (without it they
+        # cannot open a monitor-mode interface and kismet silently captures
+        # nothing), group kismet may execute, nobody else may. The helpers that
+        # are already root-only are left alone. The script discovers the list by
+        # querying the rpm rather than hardcoding it, so a Fedora bump that adds
+        # or renames a helper stays covered, and it hard-fails if kismet is
+        # absent rather than no-opping. Its header carries the full reasoning,
+        # including why plain 0750 is the wrong answer here.
+        #
+        # Per-machine follow-up, same shape as the wireshark and dialout groups:
+        # the image has no account to enroll (Atomic creates it at install time),
+        # so `sudo usermod -aG kismet "$USER"` stays a runtime step. See SETUP.md.
         - kismet
         # Network diagnostics that pair with the survey tools above. All checked
         # for suid/caps the same way kismet was; findings noted per package.
