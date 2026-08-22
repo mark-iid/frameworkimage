@@ -381,6 +381,12 @@ Protect the backup itself:
 - Rolling back to a specific known-good timestamped GHCR tag is preferable to
   `rpm-ostree rollback` (which only reaches the previous deployment).
 - Before any major rebase: `ostree admin pin 0` so a known-good deployment survives.
+- **Is the image actually still moving?** `kb3lyb-image-age` prints the age of the
+  booted deployment; `kb3lyb-image-age --check` is what the daily user timer runs
+  and notifies past 14 days. A stale reading means one of: the nightly build is
+  red, an update is staged but never applied (check `rpm-ostree status`), or the
+  laptop simply has not been on. Override the threshold with
+  `KB3LYB_IMAGE_MAX_AGE_DAYS=<n>`.
 
 ---
 

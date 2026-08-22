@@ -326,6 +326,18 @@ modules:
         - pkgconf
         - clang-tools-extra           # clangd — C/C++ language server
         - gdb
+        # jq — JSON on the command line. Already present in every image built so
+        # far, but ONLY as a transitive dependency of `grimshot`, which comes from
+        # the sway-atomic base. Nothing declared it, so its presence was an
+        # accident of the base image's package set that a base bump could remove
+        # without any build error.
+        #
+        # Two things depend on it and would break silently if that happened:
+        # /usr/bin/kb3lyb-image-age below, and the niri `comms` script in the
+        # dotfiles (Mod+G), which drives the whole layout off `niri msg --json`.
+        # Declaring it here marks it user-installed and makes its absence a build
+        # failure instead of a runtime one — same argument the fonts entry makes.
+        - jq
         # nmtui — curses front end for NetworkManager. In the image rather than
         # brew because it configures the SYSTEM NetworkManager, so it belongs
         # beside network-manager-applet above rather than in $HOME (§2).
@@ -568,5 +580,11 @@ modules:
       enabled:
         - brew-upgrade.timer
         - flatpak-update-user.timer
+        # Breaks the silence when the image stops moving. The safety property
+        # this whole update model rests on — a broken build leaves the laptop on
+        # the last good image — has no signal attached to it, so a nightly that
+        # has been red for a month looks exactly like one that has been green.
+        # See /usr/bin/kb3lyb-image-age.
+        - kb3lyb-image-age.timer
 
   - type: signing
