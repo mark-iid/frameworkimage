@@ -47,6 +47,8 @@ base so upstream updates flow through untouched.
 - **[SETUP.md](SETUP.md)** — the operations runbook: CI setup, the local build loop,
   VM testing, building the installer ISO, installing, first-boot steps, and
   updates/rollback.
+- **[HISTORY.md](HISTORY.md)** — frozen planning-phase archive. Not authoritative,
+  and parts of it are now wrong on purpose; kept only for the reasoning.
 
 ## Installation
 
@@ -101,6 +103,8 @@ cosign verify --key cosign.pub ghcr.io/mark-iid/kb3lyb-sway
 | `vm/` | Local build + VM test + ISO build tooling. |
 | `.github/workflows/` | Nightly build and the Fedora version-bump PR workflow. |
 | `DESIGN.md`, `SETUP.md` | Design rationale and operations runbook. |
+| `HISTORY.md` | Frozen planning archive; superseded by the recipe. |
+| `files/scripts/image-assert.sh` | Build-time postconditions — fails the build if the image isn't what the recipe describes. |
 
 ## License
 

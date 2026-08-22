@@ -5,12 +5,17 @@ Design decisions and rationale for a personal BlueBuild image — the record of
 implementation; that work is now done, so it reads as a decision record rather
 than a to-do list.
 
-For the *how* rather than the *why*, the authoritative sources are the recipe,
-[`recipes/recipe.yml`](recipes/recipe.yml), for what actually ships, and
-[`SETUP.md`](SETUP.md) for the build/test/install/update runbook. Sections §3, §7,
-§8, and §9 are retained as a record of the planning phase; where they describe
-pre-implementation checks, draft values, or a task list rather than decisions, the
-recipe and `SETUP.md` supersede them.
+For the *how* rather than the *why*, the authoritative sources are
+[`recipes/recipe.yml`](recipes/recipe.yml) for what actually ships and
+[`SETUP.md`](SETUP.md) for the build/test/install/update runbook. Where this
+document and the recipe disagree, **the recipe wins** — it is executed, and this
+is not.
+
+The planning-phase material that had gone stale — §3's pre-build checklist and
+§7's draft recipe skeleton — now lives in [`HISTORY.md`](HISTORY.md). Both survive
+here as stubs so existing `§3` and `§7` references still resolve. §8 and §9 stay
+in full: §8's rules are still enforced day to day, and §9 is the record of how the
+build-out was sequenced, which `SETUP.md` refers to by number.
 
 ---
 
@@ -64,7 +69,7 @@ brew lives at `/home/linuxbrew/.linuxbrew` and macOS brew at `/opt/homebrew`.
 
 | Item | Decision | Notes |
 |---|---|---|
-| Base image | Fedora Sway Atomic (`sericea`) | Lean base; we add rather than subtract |
+| Base image | Fedora Sway Atomic | Lean base; we add rather than subtract. The `sericea` codename repo is gone — it is `fedora-ostree-desktops/sway-atomic` now |
 | Compositor | **niri**, not sway | No i3 muscle memory to preserve, and niri has xwayland-satellite integration built in, which matters a lot at 135% scale |
 | Display scale | 1.35 on eDP-1 | Matches current setup |
 | Greeter | greetd + tuigreet | |
@@ -78,7 +83,7 @@ brew lives at `/home/linuxbrew/.linuxbrew` and macOS brew at `/opt/homebrew`.
 | JetBrains | Toolbox App in `$HOME` | Not layered, not flatpak. Self-updating |
 | Java | SDKMAN in `$HOME` | For SailPoint IIQ work |
 | Browsers | Firefox + ungoogled-chromium | Both flatpak |
-| Email | Evolution | **See warning in §3** |
+| Email | Evolution | Microsoft 365 / Graph backend, **not** EWS — see §3 |
 | App store | Bazaar (flatpak) | Also solves the missing software center |
 | VPN | Tailscale (layered), WireGuard (layered tools + NM), Cisco via openconnect | |
 | rclone | Layered RPM | Plus systemd user units for the mounts |
@@ -88,42 +93,19 @@ brew lives at `/home/linuxbrew/.linuxbrew` and macOS brew at `/opt/homebrew`.
 
 ---
 
-## 3. Things to verify before or during implementation
+## 3. Pre-implementation verification (archived)
 
-**Evolution and EWS — this one is time-sensitive.** Microsoft begins blocking
-Exchange Web Services in Exchange Online on **October 1, 2026**, with permanent
-shutdown April 1, 2027. `evolution-ews` also ships a newer **Microsoft 365 (Graph)**
-account backend. When configuring Evolution, use the Microsoft 365 / Graph account
-type, **not** the Exchange Web Services type. Validate that it authenticates
-against the tenant before committing to Evolution as the mail client. Fallback:
-Thunderbird with OAuth2 IMAP/SMTP, or OWA in the browser.
+Moved to [`HISTORY.md` §3](HISTORY.md). It was the checklist of things to confirm
+before building — package availability, the Evolution/EWS question, containers,
+the Framework battery limit — and every item has since been settled. The outcomes
+live in §2 and in the recipe.
 
-Evolution pulls GTK and evolution-data-server, but not a desktop environment.
-It runs fine under niri. The GNOME dependency concern is unfounded.
-
-**Package availability on current Fedora.** Verify each of these exists in Fedora
-repos at the target version, and identify a COPR only where it does not:
-
-- `niri` (should be in Fedora repos)
-- `ghostty` (may require COPR, e.g. `pgdev/ghostty`)
-- `greetd` and tuigreet (tuigreet packaging name varies; may require COPR)
-- `xwayland-satellite` (check whether niri's packaging pulls it automatically)
-- `bazaar`
-
-**Framework battery charge limit.** On Framework 13 AMD this is settable in the
-BIOS directly. Do that first and skip `fw-ectool` entirely unless something
-specific is missing. Fan control (`fw-fanctrl`) is fiddly on atomic and is
-explicitly deferred — do not include it in the first build.
-
-**Containers.** Requires a decision the operator flagged as unclear:
-
-- `toolbox` ships with the base and is fine for throwaway Fedora shells.
-- `distrobox` is worth adding if non-Fedora images are wanted. Not required.
-- **Devcontainers in VS Code are separate from both.** The Dev Containers
-  extension drives podman/docker directly. Needs `podman` (present in base) plus
-  either `podman-docker` or the extension configured with `docker.dockerPath`
-  set to podman, and the podman socket enabled as a user unit. Get this working
-  and verified, because it's an actual workflow dependency.
+One item from it is still live rather than historical. **Microsoft begins blocking
+Exchange Web Services in Exchange Online on 1 October 2026, and shuts it down
+permanently on 1 April 2027.** Evolution here is configured against the
+**Microsoft 365 / Graph** account type rather than EWS, so that deadline is
+already accounted for — but if mail breaks around those dates, check the account
+type before anything else.
 
 ---
 
@@ -350,110 +332,22 @@ at the lock screen, whereas the same mistake in `system-auth` or
 
 ---
 
-## 7. Recipe skeleton
+## 7. Recipe skeleton (archived)
 
-Starting point only, and now **superseded by the real recipe**,
-[`recipes/recipe.yml`](recipes/recipe.yml). The skeleton below still names the old
-`sericea` base and Fedora 42 and carries unverified package guesses; the shipping
-image is on `sway-atomic` at a later Fedora with corrected names. Kept for
-historical context — read the recipe for current truth.
+Moved to [`HISTORY.md` §7](HISTORY.md). It was the starting-point skeleton and is
+now actively misleading rather than merely stale: it names the retired `sericea`
+base, Fedora 42, and package names that were guesses at the time.
 
-```yaml
-name: kb3lyb-sway
-description: Framework 13 AMD, niri, minimal
-base-image: quay.io/fedora-ostree-desktops/sericea
-image-version: 42   # pinned; bumped by PR, never floating
-
-modules:
-  - type: files
-    files:
-      - source: system
-        destination: /
-
-  - type: rpm-ostree
-    repos:
-      # tailscale, vscode, and any COPRs go here
-      # use %OS_VERSION% so repo URLs follow the version bump
-    install:
-      # compositor + session
-      - niri
-      - xwayland-satellite
-      - greetd
-      - waybar
-      - mako
-      - fuzzel
-      - kanshi
-      - cliphist
-      - grim
-      - slurp
-      - gtklock
-      # hardware + system
-      - fprintd
-      - fprintd-pam
-      - brightnessctl
-      - playerctl
-      - power-profiles-daemon
-      - blueman
-      - network-manager-applet
-      - NetworkManager-openconnect-gnome
-      - wireguard-tools
-      - tailscale
-      # userland
-      - zsh
-      - tmux
-      - rclone
-      - fuse3
-      - code
-      - evolution
-      - evolution-ews
-
-  # codecs: RPM Fusion + ffmpeg swap + freeworld VA drivers.
-  # Most fragile module. Expect this to be what breaks on a version bump.
-  - type: rpm-ostree
-    repos:
-      - https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-%OS_VERSION%.noarch.rpm
-      - https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-%OS_VERSION%.noarch.rpm
-    replace:
-      - from-repo: rpmfusion-free
-        packages:
-          - ffmpeg
-      - from-repo: rpmfusion-free
-        packages:
-          - mesa-va-drivers-freeworld
-
-  - type: default-flatpaks
-    notify: true
-    system:
-      install:
-        - org.mozilla.firefox
-        - io.github.ungoogled_software.ungoogled_chromium
-        - com.slack.Slack
-        - com.discordapp.Discord
-        - com.valvesoftware.Steam
-        - org.libreoffice.LibreOffice
-        # bazaar - verify flatpak ID
-      remove: []
-
-  - type: script
-    scripts:
-      - authselect-fingerprint.sh
-      - brew-install.sh
-      - electron-wayland-flags.sh
-
-  - type: systemd
-    system:
-      enabled:
-        - greetd.service
-        - rpm-ostreed-automatic.timer
-        - fprintd.service
-        - tailscaled.service
-
-  - type: signing
-```
+[`recipes/recipe.yml`](recipes/recipe.yml) is the only authority on what is
+installed.
 
 ---
 
-## 8. Rules for the implementation session
+## 8. Operating rules
+
+Written for the implementation session and still in force — these are the rules
+the recipe and `SETUP.md` cite by number (§8.1, §8.2, §8.5).
+
 
 1. **Never run `rpm-ostree rebase` on the daily driver.** Build and validate
    images only. The operator performs rebases manually, with a pinned deployment.
@@ -468,7 +362,13 @@ modules:
 5. Prefer `$HOME` over layering, and layering over overrides. Overrides are the
    only category that carries a recurring maintenance cost.
 
-## 9. Suggested first tasks
+## 9. Build-out sequence (completed)
+
+The order the image was actually built in. Kept because `SETUP.md` refers to these
+steps by number (§9.2 the codec smoke test, §9.4 VM testing, §9.8 the ISO), and
+because the sequencing — codecs first, VM before hardware, hardware before wiping
+— is the part worth repeating if this is ever rebuilt from scratch.
+
 
 1. Scaffold from `blue-build/template` and get a trivial image building locally.
 2. Add the codec module alone and confirm it depsolves. This is the risky one;
