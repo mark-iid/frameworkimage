@@ -587,4 +587,22 @@ modules:
         # See /usr/bin/kb3lyb-image-age.
         - kb3lyb-image-age.timer
 
+  # Postconditions. MUST BE THE LAST module that can fail (signing follows and
+  # only signs what was built). A green depsolve says the recipe resolved; it says
+  # nothing about whether the image is the one described above, and this repo has
+  # already shipped defects a depsolve gate cannot see — the `files`-module
+  # ordering that let rpms revert baked config, and the module ordering that
+  # `unrar` silently depends on. Every check in this script corresponds to a
+  # hazard documented in prose somewhere in this repo; prose cannot fail a build.
+  #
+  # It runs in the local loop too (./build-local.sh), so a regression surfaces
+  # before it is ever pushed.
+  #
+  # Note what it deliberately does NOT check: anything whose value is re-resolved
+  # on the installed system. Numeric uid/gid is the one that bites — see the group
+  # note in kismet-suid-scope.sh — and belongs in a host-side check, not here.
+  - type: script
+    scripts:
+      - image-assert.sh
+
   - type: signing

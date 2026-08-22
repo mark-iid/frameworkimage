@@ -208,6 +208,25 @@ limitation given HDMI is only used for presenting.
 - BlueBuild publishes timestamped tags alongside `latest`. Rolling back to a
   specific known-good build from weeks ago is preferable to `rpm-ostree rollback`,
   which only reaches the single previous deployment.
+- **The safety property above is silent, so something has to say it out loud.**
+  "A broken build leaves the laptop on the last good image" is the right
+  behaviour and it produces no signal whatsoever: a nightly that has been red for
+  a month looks identical, from the laptop, to one that has been green all month.
+  The same silence covers a staged-but-never-applied update or a registry auth
+  failure. `kb3lyb-image-age.timer` (user scope, daily + 15min after login) reads
+  the booted deployment's commit timestamp — which for a container deployment is
+  when the image was *built* — and raises a critical mako notification past 14
+  days. It deliberately does not try to work out *which* of those went wrong; it
+  just breaks the silence so someone goes and looks.
+- **A green build is not a working image.** Depsolve success says the recipe
+  resolved, not that the result is what the recipe describes — this repo has
+  shipped a config file silently reverted by an rpm, and depends on module
+  ordering that `unrar` would degrade under without any error. The last module in
+  the recipe is `files/scripts/image-assert.sh`, which asserts those hazards
+  directly and fails the build if any of them regressed. It runs in the local loop
+  too, so a regression surfaces before it is ever pushed. Its one blind spot is
+  documented in its header: anything re-resolved on the installed system, numeric
+  uid/gid above all, can be right in the build container and wrong on the laptop.
 
 ---
 
