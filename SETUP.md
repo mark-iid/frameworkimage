@@ -74,6 +74,26 @@ verification step to remember.
 The laptop is not touched until a VM boots this image to a usable niri session (§9).
 bootc-image-builder is **rootful**, so the disk build needs `sudo`; QEMU boot does not.
 
+**QEMU is a prerequisite and is NOT in this image.** It never has been — the `vm/`
+tooling was written on the old Aurora host, which shipped it, and the gap went
+unnoticed because a green build says nothing about whether the gate that follows it
+can run. Install it before the first VM test on a fresh machine.
+
+Which QEMU you install decides how much of the test you get:
+
+| | greeter check | niri renders |
+|---|---|---|
+| `brew install qemu` | yes | **no** |
+| Fedora `qemu-system-x86-core` + `qemu-device-display-virtio-vga-gl` | yes | yes |
+
+Homebrew's bottle is built without virglrenderer, so it has `virtio-vga` (2D) but no
+`virtio-vga-gl`. `boot-check.sh` detects that, falls back to 2D and says loudly what
+is lost. The fallback is still worth running — tuigreet is an fbcon TTY program and
+needs no compositor, so the whole boot path through greetd is genuinely exercised
+and the screenshot means what it says. What you do **not** get is niri: it exits
+immediately with no render node, so a green 2D run is proof the image boots to a
+login prompt and nothing more. Do not read it as proof of a working desktop.
+
 ```
 bash vm/export-image.sh          # refresh vm/kb3lyb-sway.oci from the CURRENT image (do this first!)
 sudo bash vm/build-qcow2.sh      # build the qcow2 (rootful)
@@ -89,8 +109,10 @@ sudo bash vm/build-qcow2.sh
 bash vm/retest.sh verify
 ```
 
-> QEMU must use `virtio-vga-gl` + `egl-headless` (boot-check.sh does) or niri exits
-> for lack of a GPU render node — a VM artifact, not an image bug.
+> niri needs `virtio-vga-gl` + `egl-headless` to have a GPU render node; without one
+> it exits immediately. That is a VM artifact, not an image bug. `boot-check.sh`
+> picks the 3D pair when the QEMU build offers it and degrades to 2D with a warning
+> when it does not — see the table above for what each mode actually proves.
 
 ---
 

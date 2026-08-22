@@ -37,6 +37,35 @@ if [ "${1:-}" = "--shutdown" ]; then
 fi
 
 [ -n "$QCOW" ] || { echo "!! no qcow2 in vm/output — run vm/build-qcow2.sh first"; exit 1; }
+
+# QEMU is NOT in this image and never has been — the vm/ tooling was written on the
+# old Aurora host, which shipped it. It is a prerequisite you install yourself; see
+# SETUP §3.
+command -v qemu-system-x86_64 >/dev/null 2>&1 || {
+  echo "!! qemu-system-x86_64 not found. See SETUP §3 — it is not part of this image."
+  exit 1
+}
+
+# virtio-vga-gl needs a QEMU built against virglrenderer, and not every build is.
+# Homebrew's bottle is not: it has virtio-vga (2D) only. Rather than fail on the
+# -device line with an opaque error, degrade deliberately and say what is lost.
+#
+# What survives 2D: the whole boot path through greetd to the tuigreet greeter,
+# which is what the screenshot below asserts — tuigreet is an fbcon TTY program and
+# needs no compositor. What does NOT: niri itself, which exits immediately with no
+# renderer, so the "log in over VNC and watch it render" step is unavailable.
+if qemu-system-x86_64 -device help 2>/dev/null | grep -q '"virtio-vga-gl"'; then
+  VGA_DEVICE=virtio-vga-gl
+  DISPLAY_BACKEND=egl-headless
+else
+  VGA_DEVICE=virtio-vga
+  DISPLAY_BACKEND=none
+  echo "!! This QEMU has no virtio-vga-gl (built without virglrenderer)."
+  echo "!! Falling back to 2D. The greeter check below is still valid; niri will NOT"
+  echo "!! render, so do not read a successful run as proof of a working desktop."
+  echo "!! For the full check install Fedora's qemu-device-display-virtio-vga-gl."
+fi
+
 rm -f "$QMP"
 
 echo ">>> Booting $QCOW (KVM, VNC 127.0.0.1:590${VNC_DISPLAY}, ssh localhost:${SSH_PORT})"
@@ -54,7 +83,7 @@ rm -f vm/serial.sock
 qemu-system-x86_64 \
   -machine q35,accel=kvm -cpu host -m 4096 -smp 4 \
   -drive file="$QCOW",if=virtio,format=qcow2 \
-  -device virtio-vga-gl -display egl-headless -vnc 127.0.0.1:${VNC_DISPLAY} \
+  -device "$VGA_DEVICE" -display "$DISPLAY_BACKEND" -vnc 127.0.0.1:${VNC_DISPLAY} \
   -netdev user,id=n0,hostfwd=tcp:127.0.0.1:${SSH_PORT}-:22 -device virtio-net,netdev=n0 \
   -device virtio-rng-pci \
   -qmp unix:"$QMP",server,nowait \
@@ -65,7 +94,9 @@ echo ">>> QEMU pid $(cat "$PIDF"). Waiting 75s for boot + niri session..."
 sleep 75
 
 echo ">>> Capturing framebuffer screenshot -> $SHOT"
-qmp "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$PWD/$SHOT\"}}"
+# format is REQUIRED. Without it screendump emits a PPM regardless of the file
+# extension, so $SHOT was a PPM called .png that no image viewer would open.
+qmp "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$PWD/$SHOT\",\"format\":\"png\"}}"
 sleep 2
 ls -lh "$SHOT" 2>&1
 
