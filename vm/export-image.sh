@@ -4,8 +4,9 @@
 # whenever the image has been rebuilt, or the disk will be built from a stale image.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+. ./lib.sh
 
-IMAGE="${IMAGE:-localhost/kb3lyb-sway:44}"
+IMAGE="${IMAGE:-localhost/$(recipe_tag recipes/recipe.yml)}"
 ARCHIVE="vm/kb3lyb-sway.oci"
 
 podman image exists "$IMAGE" || { echo "!! $IMAGE not in local storage — build it first (./build-local.sh)"; exit 1; }

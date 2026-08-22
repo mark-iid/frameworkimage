@@ -53,13 +53,19 @@ Iterate locally, never via GitHub Actions, and **never `rpm-ostree rebase` the d
 driver** (§8.1) — build and validate images only.
 
 ```
-./build-local.sh                 # generate Containerfile + podman build -> localhost/kb3lyb-sway:44
+./build-local.sh                 # generate Containerfile + podman build -> localhost/kb3lyb-sway:<image-version>
 ./build-local.sh recipes/codec-test.yml   # isolated codec depsolve smoke test (the fragile module, §9.2)
 ```
 
 `build-local.sh` runs the BlueBuild CLI in a container to template the Containerfile,
 then builds with rootless podman + `--security-opt label=disable` (SELinux exec
-workaround for the module scripts).
+workaround for the module scripts). The tag is derived from the recipe's own `name`
+and `image-version`, so it follows a Fedora bump automatically.
+
+The last module in the recipe is `files/scripts/image-assert.sh`, so a local build
+either ends with `image-assert: all postconditions hold` or fails with the specific
+postconditions that broke. It is the same gate CI runs — there is no separate
+verification step to remember.
 
 ---
 

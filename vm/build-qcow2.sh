@@ -10,8 +10,9 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+. ./lib.sh
 ARCHIVE="vm/kb3lyb-sway.oci"
-IMAGE="localhost/kb3lyb-sway:44"
+IMAGE="localhost/$(recipe_tag recipes/recipe.yml)"
 BIIB="quay.io/centos-bootc/bootc-image-builder:latest"
 
 echo ">>> Loading ${IMAGE} into ROOT podman storage from ${ARCHIVE}"

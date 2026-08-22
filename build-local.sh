@@ -13,9 +13,12 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
+. ./lib.sh
 
 RECIPE="${1:-recipes/recipe.yml}"
-TAG="${TAG:-kb3lyb-sway:44}"
+# Tag derived from the recipe itself (name + image-version), so the automated
+# Fedora bump does not leave this pointing at the previous release. See lib.sh.
+TAG="${TAG:-$(recipe_tag "$RECIPE")}"
 REGISTRY="${REGISTRY:-ghcr.io}"
 NAMESPACE="${NAMESPACE:-kb3lyb}"
 

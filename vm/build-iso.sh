@@ -21,9 +21,10 @@
 # the dangerous step (DESIGN §10).
 set -euo pipefail
 cd "$(dirname "$0")/.."
+. ./lib.sh
 
 ARCHIVE="vm/kb3lyb-sway.oci"
-IMAGE="localhost/kb3lyb-sway:44"
+IMAGE="localhost/$(recipe_tag recipes/recipe.yml)"
 BIIB="quay.io/centos-bootc/bootc-image-builder:latest"
 
 [ -f "$ARCHIVE" ] || { echo "!! $ARCHIVE missing — run: bash vm/export-image.sh"; exit 1; }
