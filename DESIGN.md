@@ -267,6 +267,26 @@ from niri `spawn-at-startup` to pull the target up. A cleaner fix would be to la
 niri via `niri.service` from greetd, but that's login-critical and untested — the
 dotfiles workaround is low-risk and reversible.
 
+**GIDs that own files in `/usr` are pinned** (`/usr/lib/sysusers.d/00-kb3lyb-gids.conf`).
+A `chgrp` records a number, not a name. Groups declared `g <name> -` are allocated
+dynamically, counting down from 999 in creation order, and the build container and
+an installed laptop create them in different orders. Worse, `/etc/group` is local
+state that survives a rebase, so adding a group-owning package to the image makes
+the machine allocate it locally at a number the image never used. On 2026-08-22
+three were wrong at once: `kismet` 958 in the image / 960 on the laptop, `rtlsdr`
+959/958, `wireshark` 956/957. The visible result was that `kismet-suid-scope.sh`
+had correctly narrowed the capture helpers to `4750 root:<kismet>` and thereby made
+them unrunnable, and `dumpcap` was gated on a group the user was not in. Both
+hardened and broken simultaneously, with a green build.
+
+`pin-gids.sh` reconciles the build container against the pin file and restamps
+what was already written; `kb3lyb-gid-reconcile.service` does the one-time
+migration on machines that predate it. Note the shape of this bug: it is invisible
+to `image-assert.sh`, because inside the build container the numbers are
+self-consistent and correct. It is the worked example of that script's documented
+blind spot — anything re-resolved on the installed system has to be checked there,
+not at build time.
+
 Note also the fingerprint↔keyring interaction (SETUP §6). `pam_fprintd` as
 `sufficient` at the top of `system-auth` short-circuits `pam_unix`, so a
 fingerprint login never captures a password and `pam_gnome_keyring` cannot unlock

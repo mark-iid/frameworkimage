@@ -473,6 +473,15 @@ modules:
   # fingerprint PAM stack it reasons about is /etc/pam.d/gtklock from above.
   - type: script
     scripts:
+      # FIRST, because everything after it that touches a group by name has to
+      # resolve to the pinned number rather than whatever this build container
+      # happened to allocate. Reads /usr/lib/sysusers.d/00-kb3lyb-gids.conf,
+      # which the `files` module above installs — read that file for the full
+      # account of the bug. Short version: chgrp records a NUMBER, these groups
+      # are dynamically allocated, and the build container and the laptop
+      # allocate them in different orders, so /usr/bin/kismet_cap_linux_wifi was
+      # owned by a group that meant `kismet` here and `rtlsdr` there.
+      - pin-gids.sh
       - authselect-fingerprint.sh
       # Narrow kismet's setuid-root capture helpers from world-executable to
       # 4750 root:kismet. Order-independent of `files` (it only touches /usr/bin
@@ -522,6 +531,12 @@ modules:
         - tailscaled.service
         - rpm-ostreed-automatic.timer
         - flatpak-update.timer
+        # One-time migration for a machine installed before the GIDs were pinned.
+        # systemd-sysusers never renumbers an existing group and /etc/group is
+        # local state that survives a rebase, so the pin file alone cannot fix a
+        # laptop that already allocated `kismet` at 960. Idempotent — once every
+        # pinned group holds its pinned number this does nothing, every boot.
+        - kb3lyb-gid-reconcile.service
         - kb3lyb-power-profile.timer   # auto power profile: perf on AC, balanced on
                                        # battery, power-saver <20% (files/.../usr/bin
                                        # + udev rule + polkit rule)

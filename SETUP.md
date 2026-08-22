@@ -306,6 +306,22 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       `4750 root:kismet`; without the group you get permission denied on the capture
       source rather than a useful error. `wireshark` is upstream's own gating on
       `dumpcap` (`0750 root:wireshark`) and needs no fixup from us.
+
+      **This step only works because the GIDs are pinned.** Joining a group by
+      name is pointless if the number stamped on the file means a different group
+      here than it did in the build. Both of these were silently broken that way
+      until 2026-08-22: `kismet_cap_linux_wifi` was group 958, which was `kismet`
+      in the image and `rtlsdr` on the laptop, and `dumpcap` was 956 — `wireshark`
+      in the image, `usbmon` on the laptop. Both had been correctly hardened and
+      made unusable at the same moment, with a green build. See
+      `/usr/lib/sysusers.d/00-kb3lyb-gids.conf`.
+
+      A machine installed before the pin existed keeps its old numbering —
+      systemd-sysusers never renumbers an existing group, and `/etc/group` survives
+      a rebase — so `kb3lyb-gid-reconcile.service` corrects it on the first boot
+      after the pinned image lands. Verify with `getent group kismet` (expect 350)
+      and `journalctl -u kb3lyb-gid-reconcile`. Nothing to do by hand unless it
+      reports a GID clash.
       Neither is required to *read* saved captures — `tshark -r file.pcapng` works
       as any user. Only live capture needs the groups.
       Note that monitor mode drops the wifi association: this laptop has one radio,
