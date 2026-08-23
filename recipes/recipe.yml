@@ -2,7 +2,7 @@
 # yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
 # image will be published to ghcr.io/<user>/kb3lyb-sway
 name: kb3lyb-sway
-description: Framework 13 AMD, niri, minimal
+description: Framework 13 AMD, niri tiling session
 
 # Fedora Sway Atomic. Note: the old "sericea" codename repo is gone; the image
 # now lives at fedora-ostree-desktops/sway-atomic. Pinned explicitly per DESIGN §5;
@@ -417,7 +417,7 @@ modules:
   # listener on 127.0.0.1:6463 reachable by any local process. The flatpak has
   # none of those properties.
   #
-  # Bazaar is the app store (no GNOME Software on this minimal image); flatpak ID
+  # Bazaar is the app store (the sway-atomic base ships no software centre);
   # verified as io.github.kolunmi.Bazaar on Flathub.
   - type: default-flatpaks
     configurations:

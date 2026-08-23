@@ -412,9 +412,17 @@ Protect the backup itself:
 
 ---
 
-## 9. Not yet baked / known follow-ups
+## 9. Follow-ups and subsystem notes
 
-Still open:
+This section used to be one list titled "not yet baked", with completed work
+appended to it in the past tense. That let two entries drift into asserting the
+opposite of the code — see the Discord and greeter notes below, both corrected
+2026-08-22. Open work and reference material are now separated, because they rot
+differently: the first shrinks as things get done, the second only changes when
+the subsystem does.
+
+### Still open
+
 - **HDMI presenting (§2):** a `kanshi` profile for the external output is still needed.
   kanshi is installed; the profile isn't written — it keys on the specific output/EDID,
   so it's easiest to author with a display plugged in.
@@ -425,26 +433,56 @@ Still open:
   alpine`) + a `~/.pinerc` with the IMAP/SMTP servers and folder collection; store the
   password in the keyring or an app password, never in the config. A TUI complement to
   Evolution for quick terminal mail.
+- **niri has never been rendered in a VM.** The boot check proves the image reaches the
+  greeter, not that the desktop starts — Homebrew's QEMU has no `virtio-vga-gl`, so
+  boot-check falls back to 2D and niri exits for lack of a render node. Install Fedora's
+  `qemu-system-x86-core` + `qemu-device-display-virtio-vga-gl` to close this. Until then
+  no VM run is evidence of a working desktop (§3).
+- **The GID migration is unverified on real hardware.** `kb3lyb-gid-reconcile.service`
+  has only been exercised on a *fresh* install, where it has nothing to do because
+  sysusers creates the groups at the pinned numbers already. Renumbering an existing
+  `kismet` from 960 to 350 is a different path. After the first rebase onto a pinned
+  image, check `getent group kismet` and `journalctl -u kb3lyb-gid-reconcile`.
+- **Four base-image groups are still unpinned** — `sssd`, `polkitd`, `openvpn`,
+  `brlapi` all ship `/usr` files owned by their own dynamically-allocated groups, which
+  is the same latent bug §6 describes. Deliberately not fixed: pinning them means
+  renumbering groups that polkit and sssd authenticate against, to repair something we
+  did not introduce, on files we do not build. `image-assert.sh` warns about them each
+  build so the decision stays visible rather than forgotten.
+- **CI does not boot anything.** `image-assert.sh` gates every build on the image being
+  what the recipe describes, which is a real gate and not a boot test. `vm/boot-check.sh`
+  remains manual.
 
-Done since the first cut (kept for history):
+### Reference — subsystems worth knowing about
+
+Not a backlog. These are done, and they are here because the reasoning is not
+recoverable from the code alone.
+
 - **Ghostty terminal (§2):** baked from the `scottames/ghostty` COPR (the source
   ghostty's own install docs endorse; the §3 `pgdev/ghostty` guess never existed).
   Installed as a plain package so its `zlib-ng` dep resolves from Fedora (the scoped
   `repo: copr:…` form broke the build). Primary terminal (`Super+Return`); `foot` stays
   a fallback.
-- **Bazaar app store (§7):** added — `io.github.kolunmi.Bazaar` (Flathub, ID verified).
-- **Host auto-update timers (§5):** baked + enabled — `rpm-ostreed-automatic.timer`
-  (staging), `flatpak-update.timer`, and the user `brew-upgrade.timer`. The rpm-ostree
-  one is confirmed working (it staged an image update in normal use).
+- **Bazaar app store (§7):** `io.github.kolunmi.Bazaar` (Flathub, ID verified).
+- **Host auto-update timers (§5):** `rpm-ostreed-automatic.timer` (staging),
+  `flatpak-update.timer`, `flatpak-update-user.timer`, and the user `brew-upgrade.timer`.
+  Both flatpak timers exec `/usr/bin/kb3lyb-flatpak-update` rather than `flatpak update`
+  directly — the bare command reports success while updating nothing in two distinct
+  ways (see that script's header). Staleness of the image itself is watched separately
+  by `kb3lyb-image-age.timer` (§8).
 - **Electron Wayland overrides (§4):** confirmed on the real install — Slack renders
   sharp and dark.
-- **Discord — native, not flatpak:** the `com.discordapp.Discord` flatpak's zypak
-  sandbox breaks the Wayland splash→main-window handoff under niri (web app loads, main
-  window never maps; stuck "Discord Updater / Starting" splash — the renderer also
-  segfaulted on a corrupt GPU/shader cache). Removed from the recipe + its flatpak
-  override; `kb3lyb-bootstrap` now installs the official tarball into `$HOME`
-  (`~/.local/share/Discord`, self-updating, launches on host Wayland/GPU). Verified: main
-  window maps, zero crashes.
+- **Discord is a system flatpak, and must have NO flatpak override.** It was briefly a
+  native tarball in `$HOME` on the theory that the flatpak's zypak sandbox broke the
+  Wayland splash→main-window handoff under niri. **That diagnosis was wrong.** The cause
+  was a stale `/var/lib/flatpak/overrides/com.discordapp.Discord` left over from an
+  earlier image revision; any override on this app — even sockets alone — puts the
+  renderer in a segfault loop behind a stuck "Discord Updater" splash. Bisected on the
+  live machine: no override works, sockets-only breaks, and re-applying the override to
+  a known-good install reproduces the break on demand. The flatpak selects Wayland on
+  its own, unaided. This matters beyond tidiness — the tarball had no sandbox at all,
+  self-updated by exec'ing an unsigned download into `~/.config/discord`, and opened an
+  RPC listener on `127.0.0.1:6463` reachable by any local process. Do not go back to it.
 - **Mail:** Evolution + evolution-ews baked (M365/Graph + personal; mako notifications).
 - **Portal FileChooser fix (open/save dialogs):** the stock niri portal config
   (`/usr/share/xdg-desktop-portal/niri-portals.conf`) has `default=gnome;gtk`, routing
@@ -464,13 +502,14 @@ Done since the first cut (kept for history):
   To switch presets: open EasyEffects → Presets → pick another, or
   `flatpak run com.github.wwmm.easyeffects -l "HifiScan+EEGuide"`. Re-run the upstream
   installer to update the presets (this is per-user `$HOME` data, not baked).
-- **Norton-blue login + wallpaper + big console font:** the tuigreet greeter runs via
-  `/usr/bin/kb3lyb-greeter`, which redefines console palette color 0 to `#0000AA` so the
-  *whole* login screen is one Norton blue (not just the prompt box), then execs tuigreet
-  with the Norton palette. `/etc/vconsole.conf` sets `FONT=latarcyrheb-sun32` (a 16x32
-  glyph, ~double the stock size) so login/boot text is legible on the 200-DPI panel. The
-  niri session paints a matching solid `#0000AA` wallpaper via `swaybg -c 0000AA`
-  (dotfiles `spawn-at-startup`). All three are LOGIN-adjacent; the greeter change is
+- **Norton-blue login + big console font:** the tuigreet greeter runs via
+  `/usr/bin/kb3lyb-greeter`, which redefines console palette entry 0 to **`#000080`**
+  (navy) so the *whole* login screen is one colour rather than just the prompt box, then
+  execs tuigreet with the matching Norton palette. `/etc/vconsole.conf` sets
+  `FONT=latarcyrheb-sun32` (a 16x32 glyph, ~double the stock size) so login/boot text is
+  legible on the 200-DPI panel. The niri session's wallpaper is an image via `swaybg -i
+  … -m fill`, with `-c 000080` as the colour behind any letterboxing (dotfiles
+  `spawn-at-startup`). All of this is LOGIN-adjacent and the greeter change is
   login-critical — verify after upgrade, roll back from the boot menu if login breaks.
 - **Automatic power profiles:** niri has no GNOME power panel, so `kb3lyb-power-profile`
   (script + `.timer` + a `power_supply` udev rule) drives tuned-ppd: **performance on
