@@ -1,1 +1,4 @@
-* @xynydev @fiftydinar
+# Inherited from the BlueBuild template, which listed its own maintainers here.
+# They have no relationship to this repo — replaced with the actual owner so that
+# review requests and any future code-owner rule point somewhere real.
+* @mark-iid

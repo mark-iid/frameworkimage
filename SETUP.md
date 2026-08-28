@@ -36,14 +36,65 @@ Done once per repo clone. CI is `.github/workflows/`:
 > contains no keyless/OIDC/Fulcio/Rekor path. Verified against the action
 > definition on `main`, not assumed. Revisit if upstream adds support — this key
 > is the single credential that can put root on the laptop via a signed update.
-- [ ] **Settings → Actions → Workflow permissions:** *Read and write* + tick
-      *Allow GitHub Actions to create and approve pull requests* (version-bump needs it).
+- [ ] **Settings → Actions → Workflow permissions:** *Read repository contents
+      and packages permissions* + tick *Allow GitHub Actions to create and approve
+      pull requests*. The default is deliberately **read-only**: both workflows
+      declare the write scopes they need in their own `permissions:` block
+      (`build.yml` job-level, `fedora-version-bump.yml` top-level), so a
+      read-only default costs nothing and means any *future* workflow starts
+      with no write token by accident. The create-and-approve tick, despite its
+      name, is what lets `peter-evans/create-pull-request` open the version-bump
+      PR at all — untick it and that workflow fails with "GitHub Actions is not
+      permitted to create or approve pull requests."
+- [ ] **Settings → Actions → General: require actions to be pinned to a full-length
+      commit SHA.** Every `uses:` in this repo is already SHA-pinned for the reason
+      in `build.yml`'s comment; this makes the policy enforced rather than a
+      convention that erodes. A workflow referencing a mutable tag now fails to
+      start instead of silently running whatever that tag points at today.
 - [ ] **Make the `ghcr.io/<owner>/kb3lyb-sway` package public** after the first
       successful build creates it.
 
 > `cosign.key` is gitignored — never commit it. If it's ever lost, regenerate the
-> pair (`cosign generate-key-pair`), commit the new `cosign.pub`, and update the
-> secret in both stores.
+> pair (`cosign generate-key-pair`), commit the new `cosign.pub`, and re-set
+> `SIGNING_SECRET` in the Actions store (only — see the Dependabot note above).
+> Every host that has already rebased needs the new public key before it will
+> accept a build signed with the new private one.
+
+### 1.1 Security tab
+
+One-time repo settings, all under **Settings → Advanced Security** and
+**Settings → Rules** unless noted. Reportable as `gh api repos/<owner>/<repo>
+--jq .security_and_analysis`.
+
+- [ ] **Dependabot alerts** and **Dependabot security updates** — on. `dependabot.yml`
+      only configures *version* updates (weekly, grouped); alerts are a separate
+      switch and were off, which meant a known-vulnerable pinned action would
+      have produced no signal at all.
+- [ ] **Secret scanning** + **push protection** — on. Push protection is the one
+      that matters here: it blocks a `cosign.key` paste at `git push` time rather
+      than reporting it after it is already public.
+- [ ] **Private vulnerability reporting** — on. This is what `SECURITY.md` points
+      reporters at; without it the only channel is a public issue, which is the
+      wrong place for anything touching the signing chain.
+- [ ] **Code scanning: CodeQL default setup, `actions` language.** CodeQL cannot
+      analyse shell or the recipe YAML, so it is not looking at the modules — it
+      is auditing `.github/workflows/` for the workflow-specific failure modes
+      (expression injection into `run:`, unpinned or over-privileged steps,
+      artifact/secret leakage). That is the right target: the workflows are where
+      `SIGNING_SECRET` lives, and the scripts are covered by review plus
+      `image-assert.sh`. Default setup rather than a committed workflow, so there
+      is no extra `uses:` to keep pinned.
+- [ ] **Ruleset `protect-main`** — active on the default branch, blocking
+      **deletion** and **non-fast-forward (force) pushes**. Deliberately *not*
+      requiring pull requests: this is a single-operator repo and direct pushes to
+      `main` are the normal workflow. What the rules buy is that `main`'s history
+      cannot be silently rewritten — which matters because whatever is on `main`
+      gets built, signed, and staged onto the laptop overnight without anyone
+      looking at it.
+- [ ] **Validity checks** and **non-provider patterns** for secret scanning —
+      enable in the UI if offered. The REST API accepts the PATCH and leaves both
+      `disabled`, so they appear to be gated to Secret Protection / GHAS rather
+      than free public repos; not worth chasing.
 
 ---
 
