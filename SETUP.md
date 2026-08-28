@@ -486,12 +486,37 @@ Protect the backup itself:
   the repo as `cosign-old.pub` and in Nextcloud as
   `kb3lyb-sway-cosign-SUPERSEDED-2026-08.pub`.
 - **Picking up a rotated key on a host.** After a rotation the host still trusts
-  the old public key and will refuse every new build. Rebase via the unsigned ref
-  once to pull in the new key and policy, then back to the signed ref — the same
-  two-step the initial install uses (README "Installing"). Do not hand-edit
-  `/etc/pki/containers/kb3lyb-sway.pub` instead: `/etc` is a merged writable
-  overlay, so a local edit there is recorded as a config modification and is then
-  preserved across future deployments, which would mask the *next* rotation.
+  the old public key and refuses every new build. Install the new key directly at
+  the path the policy already names, then upgrade:
+  ```
+  sudo install -m 0644 -o root -g root cosign.pub /etc/pki/containers/kb3lyb-sway.pub
+  rpm-ostree upgrade      # no sudo: authorises via polkit, so it can prompt on the desktop
+  ```
+  **The initial-install trick does not work here.** README "Installing" says to
+  rebase via `ostree-unverified-registry:` first, and it is correct *for a first
+  install* — but on a host that already has this image, it fails:
+  ```
+  error: Preparing import: Fetching manifest: failed to invoke method OpenImage:
+  cryptographic signature verification failed: invalid signature when validating
+  ASN.1 encoded signature
+  ```
+  `ostree-unverified-*` only disables *ostree's* own signature check. The fetch
+  still goes through `/etc/containers/policy.json`, which names
+  `ghcr.io/mark-iid/kb3lyb-sway` explicitly and demands `sigstoreSigned` against
+  the old key. On a first install there is no such entry yet — that is the whole
+  difference. Verified the hard way, 2026-08-27.
+- **Why hand-editing `/etc` is safe *here* specifically.** `/etc` is a merged
+  writable overlay, so a local edit is normally carried across deployments and
+  would mask the *next* rotation. It does not, provided the bytes you write are
+  exactly the key the new image ships at `/usr/etc/pki/containers/`: once that
+  deployment becomes the parent, the local copy is identical to the default,
+  ostree stops counting it as a modification, and the file tracks the image again.
+  Confirm with `cmp` against the staged deployment before rebooting rather than
+  trusting it — writing an *almost* right key is what makes this permanent:
+  ```
+  D=$(ls -d /ostree/deploy/*/deploy/*/ | head -1)   # pick the staged one
+  cmp /etc/pki/containers/kb3lyb-sway.pub "$D/usr/etc/pki/containers/kb3lyb-sway.pub"
+  ```
 - **Is the image actually still moving?** `kb3lyb-image-age` prints the age of the
   booted deployment; `kb3lyb-image-age --check` is what the daily user timer runs
   and notifies past 14 days. A stale reading means one of: the nightly build is
