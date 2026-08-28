@@ -54,11 +54,24 @@ Done once per repo clone. CI is `.github/workflows/`:
 - [ ] **Make the `ghcr.io/<owner>/kb3lyb-sway` package public** after the first
       successful build creates it.
 
-> `cosign.key` is gitignored — never commit it. If it's ever lost, regenerate the
-> pair (`cosign generate-key-pair`), commit the new `cosign.pub`, and re-set
-> `SIGNING_SECRET` in the Actions store (only — see the Dependabot note above).
-> Every host that has already rebased needs the new public key before it will
-> accept a build signed with the new private one.
+- [ ] **Back up `cosign.key` off this machine, in the same sitting that generates
+      it.** `Documents/keys/kb3lyb-sway-cosign.key` in Nextcloud, mode 0600,
+      alongside a `README-kb3lyb-sway-cosign.md` saying what it signs and where
+      else it must exist. This checklist item is not optional bookkeeping: the
+      first key was lost exactly this way — gitignored (correctly), therefore
+      present in one working directory and nowhere else, and gone the moment that
+      directory was. It survived only as an Actions secret, which cannot be read
+      back out. Rotated 2026-08-27 for that reason, not because of any compromise.
+
+> `cosign.key` is gitignored — never commit it. Push protection is on, so an
+> accidental paste is blocked at `git push`, but do not rely on that. If the key
+> is lost or suspected compromised, regenerate the pair
+> (`COSIGN_PASSWORD="" cosign generate-key-pair`), **copy both halves to Nextcloud
+> first**, commit the new `cosign.pub`, keep the outgoing one as
+> `cosign-old.pub`, and re-set `SIGNING_SECRET` in the Actions store (only — see
+> the Dependabot note above). Every host that has already rebased needs the new
+> public key before it will accept a build signed with the new private one; the
+> procedure for that is §8.
 
 ### 1.1 Security tab
 
@@ -454,6 +467,31 @@ Protect the backup itself:
 - Rolling back to a specific known-good timestamped GHCR tag is preferable to
   `rpm-ostree rollback` (which only reaches the previous deployment).
 - Before any major rebase: `ostree admin pin 0` so a known-good deployment survives.
+- **Rolling back to an image older than the 2026-08-27 key rotation.** Builds from
+  before that date are signed with the superseded key, which no host trusts any
+  more, so a rebase to one of those timestamped tags fails signature verification
+  rather than booting something unverified. This is the intended behaviour, not a
+  fault. To reach one deliberately, point `keyPath` in
+  `/etc/containers/policy.json` at the old key — the image ships it at
+  `/etc/pki/containers/kb3lyb-sway-old.pub` precisely so that this needs no
+  network and no repo checkout — rebase, then put `keyPath` back:
+  ```
+  sudo sed -i 's|kb3lyb-sway.pub|kb3lyb-sway-old.pub|' /etc/containers/policy.json
+  sudo rpm-ostree rebase ostree-image-signed:docker://ghcr.io/mark-iid/kb3lyb-sway:<old-tag>
+  sudo sed -i 's|kb3lyb-sway-old.pub|kb3lyb-sway.pub|' /etc/containers/policy.json
+  ```
+  Restoring `keyPath` matters — left pointing at the old key, the host would stop
+  accepting *current* builds and silently stall on an old image, which is the
+  failure `kb3lyb-image-age` exists to catch. The superseded public key is also in
+  the repo as `cosign-old.pub` and in Nextcloud as
+  `kb3lyb-sway-cosign-SUPERSEDED-2026-08.pub`.
+- **Picking up a rotated key on a host.** After a rotation the host still trusts
+  the old public key and will refuse every new build. Rebase via the unsigned ref
+  once to pull in the new key and policy, then back to the signed ref — the same
+  two-step the initial install uses (README "Installing"). Do not hand-edit
+  `/etc/pki/containers/kb3lyb-sway.pub` instead: `/etc` is a merged writable
+  overlay, so a local edit there is recorded as a config modification and is then
+  preserved across future deployments, which would mask the *next* rotation.
 - **Is the image actually still moving?** `kb3lyb-image-age` prints the age of the
   booted deployment; `kb3lyb-image-age --check` is what the daily user timer runs
   and notifies past 14 days. A stale reading means one of: the nightly build is

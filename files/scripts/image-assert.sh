@@ -222,6 +222,26 @@ done
 assert "sddm disabled in favour of greetd" \
   sh -c '[ "$(systemctl is-enabled sddm.service 2>/dev/null)" != enabled ]'
 
+# --- Superseded signing key -------------------------------------------------
+# The key was rotated 2026-08-27, so every GHCR tag built before then is signed
+# with a key no host trusts any more. SETUP §8's rollback procedure repoints
+# policy.json at this file to reach one of those images; it is baked in precisely
+# so that recovery needs no network and no repo checkout. Lose the file and the
+# documented procedure silently stops working — at the exact moment it is needed,
+# which is when a current build has gone bad.
+assert "superseded signing key available for rollback" \
+  sh -c 'grep -q "BEGIN PUBLIC KEY" /etc/pki/containers/kb3lyb-sway-old.pub'
+# The two must not be the same key, or the rollback path trusts nothing extra and
+# the file is cargo cult. Guarded because the `signing` module runs AFTER this
+# script (see the recipe comment above image-assert), so on a normal build the
+# active key is not laid down yet and there is genuinely nothing to compare. An
+# unguarded `cmp` would "pass" on the missing file — an assertion that can only
+# succeed is worse than none, since it reads as coverage.
+if [ -r /etc/pki/containers/kb3lyb-sway.pub ]; then
+  refute "superseded key differs from the active one" \
+    sh -c 'cmp -s /etc/pki/containers/kb3lyb-sway-old.pub /etc/pki/containers/kb3lyb-sway.pub'
+fi
+
 # -----------------------------------------------------------------------------
 if [ "$fails" -ne 0 ]; then
   echo "image-assert: $fails postcondition(s) FAILED — the image is not what the recipe describes" >&2

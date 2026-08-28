@@ -55,11 +55,17 @@ cosign verify --key cosign.pub ghcr.io/mark-iid/kb3lyb-sway
 ```
 
 An unsigned or unverifiable image should be treated as untrusted regardless of
-where it came from. If the private key is ever suspected compromised, the
-regeneration procedure is in [SETUP.md](SETUP.md) §"Do NOT put SIGNING_SECRET in
-the Dependabot secret store" — regenerate the pair, commit the new `cosign.pub`,
-and re-set the Actions secret; every host then needs the new key before it will
-accept a build.
+where it came from. The rotation procedure — for loss or for suspected compromise
+— is [SETUP.md](SETUP.md) §1 (generate, back up, re-set `SIGNING_SECRET`) and §8
+(get each host onto the new key).
+
+**The key was rotated on 2026-08-27.** Not because of any compromise: the previous
+private key existed only as a GitHub Actions secret, which cannot be read back
+out, so it could be neither backed up nor audited. Images built before that date
+are signed with the superseded key, kept here as
+[`cosign-old.pub`](cosign-old.pub) and shipped in the image at
+`/etc/pki/containers/kb3lyb-sway-old.pub`. Verifying one of those needs
+`--key cosign-old.pub`; hosts no longer trust it for upgrades.
 
 ## Supported versions
 
