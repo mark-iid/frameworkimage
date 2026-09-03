@@ -1,4 +1,10 @@
-# kb3lyb-sway &nbsp; [![build](https://github.com/mark-iid/frameworkimage/actions/workflows/build.yml/badge.svg)](https://github.com/mark-iid/frameworkimage/actions/workflows/build.yml)
+# kb3lyb-sway
+
+[![build](https://github.com/mark-iid/frameworkimage/actions/workflows/build.yml/badge.svg)](https://github.com/mark-iid/frameworkimage/actions/workflows/build.yml)
+[![Fedora base](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmark-iid%2Fframeworkimage%2Fmain%2Frecipes%2Frecipe.yml&query=%24.image-version&label=Fedora&prefix=F&color=51a2da&logo=fedora&logoColor=white)](recipes/recipe.yml)
+[![ghcr.io](https://img.shields.io/badge/ghcr.io-mark--iid%2Fkb3lyb--sway-2496ed?logo=podman&logoColor=white)](https://github.com/mark-iid/frameworkimage/pkgs/container/kb3lyb-sway)
+[![signed with cosign](https://img.shields.io/badge/signed-cosign-3b7cbf)](#verification)
+[![license](https://img.shields.io/github/license/mark-iid/frameworkimage?color=silver)](LICENSE)
 
 A personal [Fedora Sway Atomic](https://fedoraproject.org/atomic-desktops/sway/)
 image, built with [BlueBuild](https://blue-build.org/) and tailored for a
