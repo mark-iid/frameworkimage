@@ -235,11 +235,11 @@ Do not bake secrets, tokens, or rclone credentials into the image. The image is
 public.
 
 **Desktop session behavior lives in the dotfiles repo, not here** (per the split
-above): global dark mode (GTK `settings.ini` + `gsettings color-scheme prefer-dark`,
-plus `GTK_THEME=Adwaita:dark` exported from niri's `environment{}` — XFCE apps like
-Thunar ignore `gtk-application-prefer-dark-theme` and stay light unless the dark
-*variant* is named explicitly, which the env var forces without any extra theme
-package),
+above): global dark mode (dconf `org.gnome.desktop.interface` `gtk-theme='Adwaita'` +
+`color-scheme='prefer-dark'`, served to GTK3 through the portal, with GTK `settings.ini`
+as the non-portal fallback; GTK4/libadwaita follows `color-scheme`. The theme name must
+be one that exists on disk, and **`GTK_THEME` must not be set session-wide** — see the
+Adwaita note below),
 idle-lock (swayidle: at 5 min a full-screen cmatrix "screensaver" appears; any
 input tears it down and **gtklock** locks — password *or* fingerprint, with a
 navy Norton style, a live clock, and username; at 5.5 min gtklock locks
@@ -248,6 +248,53 @@ rather than merely hidden behind the animation; at 10 min the displays DPMS off;
 lock before suspend — see dotfiles `niri/scripts/screensaver`),
 the tray applets (nm-applet/blueman), clipboard persistence (wl-clip-persist), and a
 `graphical-session-bind.service`.
+
+Adwaita note (why `GTK_THEME` is not set session-wide). Two bugs were stacked here,
+and the second was hiding the first.
+
+The underlying bug: the dconf key `org.gnome.desktop.interface gtk-theme` was
+`'Adwaita-dark'`, **a theme that does not exist on this image**. `/usr/share/themes`
+ships only `Default` and `Emacs`; GTK3's built-in theme is plain `Adwaita`, and
+nothing here provides an `Adwaita-dark` directory (Fedora has no `gnome-themes-extra`;
+the packaged alternative is `adw-gtk3-theme`). `xdg-desktop-portal` serves that key
+verbatim, and GTK3 apps under Wayland take the portal's value **over**
+`gtk-3.0/settings.ini` — so the lookup failed and GTK3 fell back to *light* even with
+`gtk-application-prefer-dark-theme=1` set. Measured: `rgb(246,245,244)` vs
+`rgb(53,53,53)` once the name resolves.
+
+The mask: `GTK_THEME=Adwaita:dark` in niri's `environment{}` overrides the portal, so
+GTK3 went dark and the broken key stayed invisible. But `GTK_THEME` names an *on-disk*
+theme and GTK4 ships only `Default` — the GTK4 Adwaita look comes from *libadwaita*, a
+separate library that sets `gtk-theme-name` to its own `Adwaita-empty` sentinel and
+installs the stylesheet programmatically at `adw_init()`. An explicit `GTK_THEME`
+overrides that sentinel, so every GTK4 app fell back to `Default` with no libadwaita
+CSS at all. niri exports `environment{}` to everything it spawns, so this hit the whole
+session: Bazaar, Mission Center, GNOME Firmware, GNOME Text Editor, Flatseal, Lockpicker
+and host `ghostty`. The visible casualty was Bazaar's search page — app names ellipsized
+to `...`, no card backgrounds. Upstream closes these as "your theme is causing this"
+(bazaar-org/bazaar#1818), and in this case upstream was right.
+
+Correct setup, verified with `GTK_THEME` unset: dconf `gtk-theme='Adwaita'` plus
+`color-scheme='prefer-dark'` — applied declaratively by `desktop-appearance.service`
+(dotfiles `systemd/`, started from niri `spawn-at-startup` ahead of
+`graphical-session-bind`), because nothing else owns those keys and loose dconf state
+is how the theme drifted to a broken value in the first place. That setup gives dark GTK3 (`rgb(53,53,53)`) *and* dark libadwaita
+(`gtk-theme-name='Adwaita-empty'`, `AdwStyleManager:dark = True`). `settings.ini` is
+kept as the non-portal fallback. Optional polish: `adw-gtk3-theme` provides real
+`adw-gtk3`/`adw-gtk3-dark` themes so GTK3 apps visually match libadwaita — set dconf
+`gtk-theme='adw-gtk3'` if it is ever added to the image.
+
+Two traps worth recording. The GTK4 dark preference must reach libadwaita through the
+portal's `org.freedesktop.appearance color-scheme`, which is exactly the signal the
+dead-portal problem below breaks — the `graphical-session.target` workaround is
+load-bearing for dark mode, not just for file choosers. And `gtk-application-prefer-dark-theme`
+is unsupported under libadwaita (it warns); that key stays in `gtk-4.0/settings.ini`
+only for plain-GTK4 apps such as HandBrake, which have no `AdwStyleManager`.
+
+**`gsettings` on `PATH` is Homebrew's**, and it reads a different store than the system
+one: during this diagnosis brew's `gsettings` reported `gtk-theme='Adwaita'` while the
+real value was `'Adwaita-dark'`. Use `/usr/bin/gsettings` or `dconf read` when checking
+session state.
 
 Locker note: gtklock (not swaylock) because swaylock is a bare ring with no field,
 labels, or usable fingerprint UX. gtklock's live clock is harmless — a verified
