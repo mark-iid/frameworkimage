@@ -124,6 +124,32 @@ modules:
       nerd-fonts:
         - NerdFontsSymbolsOnly
 
+  # Document fonts — metric-compatible clones of the Microsoft families that
+  # .pptx/.docx files off other people's machines ask for. Without them fontconfig
+  # falls back on width-mismatched faces (Calibri -> Noto Sans), so every text run
+  # is the wrong length and the layout reflows: the NHARC decks in Nextcloud render
+  # with visibly broken spacing. These two are what fontconfig's shipped
+  # 30-metric-aliases.conf already aliases to (Calibri->Carlito, Cambria->Caladea);
+  # the alias rules are present on the base image but have nothing to point at
+  # until the packages are installed. Both are in Fedora proper, no external repo.
+  # Consolas is the exception: it has no metric clone anywhere and isn't in the
+  # alias table at all, so it can only be substituted by eye — see the Cascadia
+  # Mono note below.
+  # Consumed by the LibreOffice flatpak too: flatpak bind-mounts the host font dirs
+  # into the sandbox, so an image-level install is enough, no per-app override.
+  - type: dnf
+    install:
+      packages:
+        - google-carlito-fonts              # metric clone of Calibri
+        - google-crosextra-caladea-fonts    # metric clone of Cambria
+        # Cascadia Mono — Microsoft's open-source (OFL) successor to Consolas,
+        # same humanist-monospace lineage. Not a metric clone (none exists for
+        # Consolas), but close enough in shape to stand in for it in decks that
+        # use Consolas as a display face rather than for code. The NHARC Kenwood
+        # deck is restyled onto it; keeping the font in the image is what makes
+        # that deck portable back onto this machine after a rebuild.
+        - cascadia-mono-fonts
+
   # Hardware + userland + VS Code (DESIGN §9.5). Only VS Code needs an external
   # repo — tailscale, VPN, rclone, fprintd are all in Fedora now, keeping the
   # external-repo surface (the thing that breaks on version bumps, §1) minimal.
