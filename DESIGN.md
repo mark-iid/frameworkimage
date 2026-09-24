@@ -73,12 +73,70 @@ also means there is no rollback to the old system once it starts. See §10.
   with composefs, `/` is an overlayfs, and overlayfs rejects every reconfigure,
   so no fstab option can make the remount work. Root is mounted by the initramfs
   from the `ostree=`/`root=` kargs, so the entry is inert — nothing is broken,
-  but the unit sits permanently failed.
+  but the unit sits permanently failed. See the compression bullet below; both
+  are consequences of the same dead fstab line.
 - ZFS and v4l2loopback autoload were disabled because Aurora shipped them enabled.
   **Moot on this base.** Drop entirely.
 - LUKS full-disk encryption. btrfs subvols on LUKS (`/root`, `/home`, `/var`),
   a separate LUKS ext4 volume at `/var/mnt/data`, ext4 `/boot`, vfat ESP. Now a
   free choice rather than a constraint, but reproducing it is the default plan.
+- **btrfs compression is not actually on, and `/etc/fstab` cannot turn it on.**
+  fstab asks for `compress=zstd:1` on both `/` and `/home`; no mounted btrfs has
+  it. Confirmed 2026-09-23: no `use zstd compression` line in the kernel log
+  (btrfs logs one when the option takes), no `compression` property on any
+  subvolume per `btrfs property get`, and no `c` attr via `lsattr -d`. The cause
+  is that btrfs compression is a FILESYSTEM-WIDE option fixed by the *first*
+  mount, and that mount happens in the initramfs — `first mount of filesystem` at
+  18:41:49.98 versus switch-root at 18:41:50.15 — using `rootflags=subvol=root`
+  from the BLS entry, which carries no `compress`. Every later subvolume mount
+  inherits the fs-wide options, so `var-home.mount` asking for `compress=zstd:1`
+  changes nothing, and `sysroot.mount` is not even a generated unit (its
+  `SourcePath` is `/proc/self/mountinfo` — it just adopts the initramfs mount).
+  The `/` line is dead twice over, since `systemd-remount-fs` cannot remount an
+  overlayfs at all.
+
+  The only lever is `rootflags=` on the kernel cmdline. systemd's fstab-generator
+  concatenates duplicate `rootflags=` values with a comma, so a second
+  `rootflags=compress=zstd:1` resolves to the union rather than overriding.
+  **Verified 2026-09-23** by running the generator against a synthetic cmdline,
+  which needs neither root nor a reboot:
+
+  ```sh
+  SYSTEMD_IN_INITRD=1 \
+  SYSTEMD_PROC_CMDLINE="root=UUID=<uuid> rootflags=subvol=root rw rootflags=compress=zstd:1" \
+    /usr/lib/systemd/system-generators/systemd-fstab-generator "$D" "$D" "$D"
+  # -> sysroot.mount gains Options=subvol=root,compress=zstd:1,rw
+  ```
+
+  **Confirmed on a real boot 2026-09-24** and now baked into `00-kb3lyb.toml`.
+  The kernel logs `BTRFS info (device dm-0): use zstd compression, level 1`, and
+  all three btrfs mounts (`/sysroot`, `/var`, `/var/home`) carry
+  `compress=zstd:1` — fs-wide, exactly as the single-first-mount model predicts.
+  If it ever needs re-testing by hand, use `rpm-ostree kargs
+  --append=rootflags=compress=zstd:1` — `--append-if-missing=` keys off the
+  argument NAME, sees the existing `rootflags`, and silently does nothing.
+
+  **Level 1, not 3**, measured on this machine's own data at btrfs's real 128 KiB
+  block granularity (compressing each block independently, counting a block as
+  stored uncompressed when compression does not pay):
+
+  | sample | zstd:1 | zstd:3 |
+  |---|---|---|
+  | home, 300 MB | 2.348x, 578 MB/s/core | 2.449x, 425 MB/s/core |
+  | /usr, 300 MB | 2.181x, 529 MB/s/core | 2.268x, 409 MB/s/core |
+
+  Level 3 buys ~1.8 percentage points — about 3% more than level 1 already saves
+  — for ~27% less write throughput. zstd decompression speed is essentially
+  level-independent, so that cost lands entirely on writes and buys nothing back
+  on reads. Level 1 is also Fedora's deliberate btrfs default and what anaconda
+  had already written into the fstab, so it matches stated intent too.
+
+  Two caveats now that it is on. It only affects new writes; the ~341 GB already
+  on disk stays uncompressed. And do **not** reach for `btrfs filesystem
+  defragment -r -czstd` to fix that on `/sysroot` — defragment breaks the
+  reflink/hardlink sharing between ostree deployments and can increase usage
+  rather than reduce it. `/var/home` is the only defensible target for that, and
+  even there it costs any reflink sharing.
 - rclone FUSE mounts under `~` for OneDrive and company/leadership file shares.
   Config and systemd user units need backing up; see §10.
 - zsh with starship, atuin, eza/bat/ugrep/zoxide/direnv, plus zsh-autosuggestions
