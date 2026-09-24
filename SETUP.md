@@ -634,3 +634,39 @@ recoverable from the code alone.
   /org/freedesktop/UPower/PowerProfiles org.freedesktop.UPower.PowerProfiles ActiveProfile`.
   Override manually and it re-asserts within 2 min; `systemctl mask
   kb3lyb-power-profile.timer` to disable. Thresholds live in `/usr/bin/kb3lyb-power-profile`.
+- **M365 cloud storage is two rclone FUSE mounts, not a sync client** — no local copy of
+  either tree. `onedrive-iid:` → `~/OneDrive-InstrumentalID` is the personal OneDrive for
+  Business (`drive_type = business`); `IID Company:` → `~/SharePoint-IIDCompany` is the
+  SharePoint library behind `sites/companyfiles/Shared Documents`
+  (`drive_type = documentLibrary`). Units live in the dotfiles `systemd/` package, are
+  deliberately **not** enabled, and are started at login by niri `spawn-at-startup` like
+  everything else here. OAuth tokens live in `~/.config/rclone/rclone.conf`, never in a
+  repo — that file is on the §7 backup checklist because losing it means re-authing both.
+  (`rclone-nextcloud.service` is a separate, kb3lyb-only WebDAV mount; see its header.)
+  Three things about these mounts are not derivable from the config, and each one has
+  already cost time:
+  - **A SharePoint library is its own Graph drive, not a folder inside OneDrive.** That
+    is why there are two remotes and two units rather than one mount with a subfolder.
+    No rclone option makes the library appear under `~/OneDrive-InstrumentalID`.
+    Established 2026-09-22 by walking the personal drive's entire delta feed — 696
+    pages — which contains **zero** `remoteItem` entries, i.e. there is no "Add shortcut
+    to OneDrive" pointer to follow; and rclone's onedrive backend has no shortcut
+    support in any case (there is no analogue of the drive backend's
+    `--drive-skip-shortcuts`). Each library you want locally needs its own
+    `rclone config` remote — type onedrive, same auth, then "Search for a SharePoint
+    site" — plus a copy of the unit.
+  - **OneNote notebooks are in the drive but not in the mount.** They are Graph `package`
+    items, and rclone hides them unless started with `--onedrive-expose-onenote-files`.
+    The two `Mark @ …` notebooks at the OneDrive root are the whole of the difference
+    between what Graph lists there (38 items) and what the mount shows (36). This looks
+    exactly like data loss and is not.
+  - **You cannot create a symlink inside either mount.** `ln -s` returns `EIO`: the units
+    run without `--links`, and OneDrive has no symlink type to store one in even if they
+    didn't. Put the link outside the mount and point it in.
+  The `IID Company` remote name contains a space, so it is double-quoted in that unit's
+  `ExecStart`; systemd does honour the quotes (confirmed against `/proc/<pid>/cmdline`,
+  where it lands as a single argv entry), but the quoting is easy to drop when copying
+  the unit for the next library. That unit also carries the `StartLimitIntervalSec` /
+  `StartLimitBurst` guard for the reason spelled out in `rclone-nextcloud.service`: an
+  unauthorised or missing remote is a permanent error, and without the limit it retries
+  every 10 s until reboot with nothing surfacing it.
