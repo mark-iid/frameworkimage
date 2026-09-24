@@ -45,8 +45,15 @@ also means there is no rollback to the old system once it starts. See §10.
 - Text boot, no Plymouth: `plymouth.enable=0 loglevel=3`, `rhgb`/`quiet` removed.
   Still wanted. Reapply.
 - `systemd-remount-fs.service` was masked because it failed on composefs-backed
-  read-only root. **Do not blindly reapply.** Verify whether it recurs on a fresh
-  Sway Atomic install first; this may have been Aurora-specific or since fixed.
+  read-only root. **Verified 2026-09-23: it recurs. Mask reapplied**, now in the
+  recipe's `systemd` module under `system.masked` rather than by hand. Not
+  Aurora-specific and not fixed upstream — systemd 259.9 / ostree 2026.4 / bootc
+  1.16.10 still fail it five times per boot with `overlay: No changes allowed in
+  reconfigure`. The trigger is the `/` entry anaconda writes to `/etc/fstab`:
+  with composefs, `/` is an overlayfs, and overlayfs rejects every reconfigure,
+  so no fstab option can make the remount work. Root is mounted by the initramfs
+  from the `ostree=`/`root=` kargs, so the entry is inert — nothing is broken,
+  but the unit sits permanently failed.
 - ZFS and v4l2loopback autoload were disabled because Aurora shipped them enabled.
   **Moot on this base.** Drop entirely.
 - LUKS full-disk encryption. btrfs subvols on LUKS (`/root`, `/home`, `/var`),

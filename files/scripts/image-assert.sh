@@ -222,6 +222,16 @@ done
 assert "sddm disabled in favour of greetd" \
   sh -c '[ "$(systemctl is-enabled sddm.service 2>/dev/null)" != enabled ]'
 
+# systemd-remount-fs cannot work on a composefs root: `/` is an overlayfs and
+# overlayfs refuses every reconfigure, so the `/` line anaconda writes into
+# /etc/fstab makes the unit fail five times per boot. This mask is the textbook
+# case for putting a check here — it was carried by hand on the old Aurora
+# install, was NOT reapplied at reinstall because DESIGN §1 only asked in prose
+# for it to be verified, and the failure came straight back. Prose cannot fail a
+# build. `is-enabled` reports `masked` ahead of this unit's usual `static`.
+assert "systemd-remount-fs masked (composefs root cannot be remounted)" \
+  sh -c '[ "$(systemctl is-enabled systemd-remount-fs.service 2>/dev/null)" = masked ]'
+
 # --- Superseded signing key -------------------------------------------------
 # The key was rotated 2026-08-27, so every GHCR tag built before then is signed
 # with a key no host trusts any more. SETUP §8's rollback procedure repoints

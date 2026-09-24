@@ -7,8 +7,10 @@
 # plymouth.enable=0 loglevel=3 — text boot, no Plymouth splash. rhgb/quiet are
 #   simply not added (the base doesn't force them here).
 #
-# NOT reapplied: the systemd-remount-fs.service mask (DESIGN §1 says verify on a
-#   fresh install first, do not blindly carry it over).
+# NOT here: the systemd-remount-fs.service mask. DESIGN §1 asked for it to be
+#   verified on a fresh install before being carried over; it was, on 2026-09-23,
+#   and it recurs — but a unit mask is not a kernel argument. It now lives in the
+#   recipe's `systemd` module under `system.masked`.
 
 kargs = [
     "amdgpu.dcdebugmask=0x10",
