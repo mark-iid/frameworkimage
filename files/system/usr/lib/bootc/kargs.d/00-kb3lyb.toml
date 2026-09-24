@@ -4,8 +4,25 @@
 #   display-engine hang. Hardware issue, definitely still needed. Harmless in a
 #   VM (no amdgpu), so it's safe to carry in the image.
 #
-# plymouth.enable=0 loglevel=3 — text boot, no Plymouth splash. rhgb/quiet are
-#   simply not added (the base doesn't force them here).
+# plymouth.enable=0 loglevel=3 — text boot, no Plymouth splash. rhgb is
+#   deliberately NOT here and never has been.
+#
+# quiet — here as of 2026-09-23, and the reason is worth keeping. It was deleted
+#   on 2026-08-26 and re-added by hand three days later (`rpm-ostree kargs
+#   --append-if-missing=quiet`, 2026-08-29), then carried forward by every
+#   deployment since as a LOCAL karg. That is invisible to this file: the pinned
+#   44.20260827.0 deployment predates the re-add and is the only BLS entry
+#   without it, which is what exposed the drift. A local karg does not survive
+#   the DESIGN §10 clean reinstall, so it is baked here instead — same class of
+#   silent loss as the systemd-remount-fs mask. Drop the local one with
+#   `rpm-ostree kargs --delete=quiet` so the image is the only source of truth.
+#   NOT about kernel console verbosity — that was the first (wrong) reading.
+#   printk reads `3 4 1 7` with or without it, because loglevel=3 already governs
+#   that and is stricter (quiet sets console_loglevel to 4, which is MORE
+#   permissive). The real effect is that systemd also reads `quiet` and sets
+#   ShowStatus=no, suppressing the `[  OK  ] Started ...` lines. Without it those
+#   overwrite the tuigreet greeter on the console — seen on the 2026-09-24 boot.
+#   systemd.show_status=false is the narrower equivalent if ever wanted.
 #
 # NOT here: the systemd-remount-fs.service mask. DESIGN §1 asked for it to be
 #   verified on a fresh install before being carried over; it was, on 2026-09-23,
@@ -16,4 +33,5 @@ kargs = [
     "amdgpu.dcdebugmask=0x10",
     "plymouth.enable=0",
     "loglevel=3",
+    "quiet",
 ]

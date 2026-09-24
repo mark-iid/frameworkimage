@@ -42,8 +42,28 @@ also means there is no rollback to the old system once it starts. See §10.
 
 - Kernel arg `amdgpu.dcdebugmask=0x10` (fixes a display engine hang from PSR on
   this APU). **Hardware issue, definitely still needed.** Reapply.
-- Text boot, no Plymouth: `plymouth.enable=0 loglevel=3`, `rhgb`/`quiet` removed.
-  Still wanted. Reapply.
+- Text boot, no Plymouth: `plymouth.enable=0 loglevel=3`. Still wanted.
+  `rhgb` stays out. **`quiet` does not** — corrected 2026-09-23. It was deleted
+  on 2026-08-26 and re-added by hand on 2026-08-29 (`rpm-ostree kargs
+  --append-if-missing=quiet`), then inherited by every deployment since as a
+  local karg; the pinned 44.20260827.0 deployment predates the re-add and is the
+  only BLS entry without it, which is how the drift surfaced. Local kargs are
+  invisible to the image and do not survive the §10 clean reinstall — the same
+  silent-loss pattern as the remount-fs mask above — so `quiet` is now baked into
+  `00-kb3lyb.toml`. Drop the local one (`rpm-ostree kargs --delete=quiet`) so the
+  image is the only source of truth.
+
+  **What `quiet` actually does here was initially recorded wrong, and the
+  correction matters.** It is not about kernel console verbosity: `printk` reads
+  `3 4 1 7` with or without it, because `loglevel=3` already governs that and is
+  the stricter of the two (`quiet` sets console_loglevel to 4, which is *more*
+  permissive). The visible effect comes from **systemd**, which also reads
+  `quiet` off the kernel cmdline and sets `ShowStatus=no`, suppressing the
+  `[  OK  ] Started …` unit lines. Without it those lines paint over the tuigreet
+  greeter on the console — observed directly on the 2026-09-24 boot, with
+  `systemctl show -p ShowStatus` reading `yes`. So `quiet` earns its place on a
+  greeter-on-tty setup, and `systemd.show_status=false` would be the narrower
+  equivalent if the kernel half is ever unwanted.
 - `systemd-remount-fs.service` was masked because it failed on composefs-backed
   read-only root. **Verified 2026-09-23: it recurs. Mask reapplied**, now in the
   recipe's `systemd` module under `system.masked` rather than by hand. Not
