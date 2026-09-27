@@ -14,6 +14,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write # gh run rerun, for the retry step at the end
 
 jobs:
   check:
@@ -66,6 +67,7 @@ jobs:
 
       - name: Open PR
         if: steps.detect.outputs.should_bump == 'true'
+        id: cpr
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
           branch: fedora-bump-${{ steps.detect.outputs.latest }}
@@ -86,3 +88,61 @@ jobs:
             most likely thing to fail on a new release. If it's red, RPM Fusion
             hasn't caught up yet; leave the PR open and the laptop keeps running the
             last good image.
+
+            You do not have to poll it by hand: this workflow re-runs the failed
+            jobs on its weekly schedule, so the PR turns green by itself once RPM
+            Fusion lands. Merging is still a deliberate act.
+
+      # A red PR does not re-test itself, and on a new Fedora release it will be
+      # red for a while: DESIGN §1 notes RPM Fusion lags GA by days to weeks, and
+      # the codec module is exactly what fails while it has not caught up.
+      #
+      # Nothing else rebuilds this branch. build.yml runs on `pull_request` (so:
+      # when the PR opens, and on new commits) and on a nightly `schedule` that
+      # builds MAIN, not this branch. Next Monday this workflow finds
+      # image-version already bumped, writes no commit, and so triggers no build.
+      # Without this step the PR sits red indefinitely with nothing watching for
+      # RPM Fusion to land, while the laptop quietly stays on the old release —
+      # the same silent-failure shape §5 already worries about elsewhere.
+      #
+      # `pull-request-operation == 'none'` is create-pull-request's way of saying
+      # the branch and PR were already there and nothing changed, which is
+      # precisely the "waiting for RPM Fusion" state. Relies on the PR being
+      # same-repo, so its runs carry headBranch == the bump branch.
+      - name: Retry the open PR's build
+        if: >-
+          steps.detect.outputs.should_bump == 'true' &&
+          steps.cpr.outputs.pull-request-operation == 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: fedora-bump-${{ steps.detect.outputs.latest }}
+        run: |
+          set -euo pipefail
+          run=$(gh run list --workflow build.yml --branch "$BRANCH" --limit 1 \
+                  --json databaseId,status,conclusion --jq '.[0] // empty')
+          if [ -z "$run" ]; then
+            echo "No build has ever run for $BRANCH — nothing to retry."
+            exit 0
+          fi
+          id=$(printf '%s' "$run" | jq -r .databaseId)
+          status=$(printf '%s' "$run" | jq -r .status)
+          conclusion=$(printf '%s' "$run" | jq -r .conclusion)
+          echo "latest build for $BRANCH: id=$id status=$status conclusion=$conclusion"
+
+          if [ "$status" != completed ]; then
+            echo "Still in flight — leave it alone."
+            exit 0
+          fi
+
+          case "$conclusion" in
+            failure|cancelled|timed_out)
+              echo "Re-running failed jobs: checking whether RPM Fusion has caught up."
+              gh run rerun "$id" --failed
+              ;;
+            success)
+              echo "Already green — waiting on the operator to merge (DESIGN §5)."
+              ;;
+            *)
+              echo "Conclusion '$conclusion' is not retryable; leaving it."
+              ;;
+          esac
