@@ -92,7 +92,11 @@ modules:
   # Installed as a PLAIN package (not the scoped `repo: copr:…` form) so any deps
   # resolve from Fedora too — same reason as ghostty below. It has no external deps
   # today, but the plain form keeps it from breaking the build if it ever gains one.
-  # Autostarted from the niri config (dotfiles): wl-clip-persist --clipboard both.
+  # Autostarted from the niri config (dotfiles): wl-clip-persist --clipboard
+  # regular. REGULAR ONLY: persisting the primary selection makes GTK apps drop
+  # a drag-select the moment the mouse button is released (upstream issue #3,
+  # documented in its own README) — it broke selection in Firefox and Evolution
+  # here while the niri config still said `both`.
   - type: dnf
     repos:
       copr:
