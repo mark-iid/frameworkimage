@@ -258,6 +258,54 @@ modules:
         # legitimately return nothing useful for /var/mnt/data — internal nvme0n1
         # needs no -d flag and always works.
         - smartmontools
+        # zuluCrypt — Qt GUI over cryptsetup, for encrypted volumes that are not
+        # the boot disk: unlocking the /var/mnt/data expansion card by hand when
+        # the keyfile path is not wanted, opening a LUKS volume on a random USB
+        # stick, and creating new LUKS2 containers without hand-rolling
+        # cryptsetup invocations. It does not implement crypto — it drives kernel
+        # dm-crypt through libcryptsetup, the same path the initramfs uses, so
+        # nothing here changes the at-rest story in DESIGN §2.
+        #
+        # Two GUIs: zuluCrypt-gui (create/unlock volumes, header backup, key
+        # changes) and zuluMount-gui (a mount manager listing every volume it can
+        # see). zuluSafe is a separate password-vault tool, unused here — rbw
+        # already owns that job (niri Mod+P).
+        #
+        # PRIVILEGE MODEL, checked the same way kismet and picocom above were:
+        # clean. Every binary is 0755 root:root — no setuid, no setgid, no file
+        # capabilities anywhere in the package. Elevation goes through polkit
+        # instead: it ships /usr/bin/zuluPolkit plus three actions
+        # (org.zulucrypt.zulupolkit, zulucrypt-gui, zulumount-gui). This is
+        # Fedora's packaging deliberately diverging from upstream, which installs
+        # setuid-root helpers and has historically had CVEs in exactly that path.
+        # mate-polkit (session module above) is the agent that serves the prompts,
+        # so this needs nothing further wired up.
+        #
+        # VERACRYPT: IT CAN OPEN THEM, IT CANNOT CREATE THEM. Worth writing down
+        # because the GUI advertises the format and upstream genuinely supports
+        # both directions. Reading works through libcryptsetup's TCRYPT backend,
+        # which covers TrueCrypt and VeraCrypt volumes including hidden ones,
+        # system/preboot volumes and PIM values. Writing a TCRYPT header does not:
+        # `man cryptsetup` states "Header formatting and TCRYPT header change are
+        # not supported", and there is no tcryptFormat action. Upstream zuluCrypt
+        # gets around that with a bundled tcplay fork called zuluplay, and Fedora
+        # ships neither it (no libzuluplay* in any subpackage) nor tcplay, which
+        # is not in Fedora at all. So creating a VeraCrypt container, restoring
+        # its header, or changing its key all need VeraCrypt proper — which is
+        # unpackaged for Fedora (TrueCrypt License 3.0) and absent from Flathub,
+        # i.e. an unsigned third-party blob. Do that in a toolbox container if it
+        # is ever needed, not in this image.
+        #
+        # Qt app, so it inherits QT_QPA_PLATFORM=wayland from the baked niri
+        # config and runs Wayland-native. It will NOT follow the GTK dark theme:
+        # no qt6ct/adwaita-qt is installed, so expect default Fusion light
+        # styling. Cosmetic only, and installing a Qt theming shim to fix one
+        # rarely-opened dialog is not worth the surface.
+        #
+        # zulucrypt-console (zuluCrypt-cli, zuluMount-cli) is a separate
+        # subpackage, deliberately not installed — cryptsetup is already here and
+        # is the better scripting target.
+        - zulucrypt
         # picocom — serial console for USB CDC-ACM gadgets: the Flipper Zero's
         # `?` shell, ESP32/Arduino boards, the Klipper host's console.
         #   picocom -b 115200 /dev/ttyACM0     (exit: C-a C-x)
