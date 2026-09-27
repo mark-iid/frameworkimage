@@ -67,6 +67,16 @@ modules:
         # transcribed speech into the focused window with it; also handy for any
         # host-side "paste as keystrokes" scripting.
         - wtype
+        # xdg-desktop-portal backends. All three arrive from the sway-atomic
+        # base today and nothing in the base *requires* them, so pin them here:
+        # files/system/etc/xdg-desktop-portal/niri-portals.conf names all three
+        # by hand, and a base-image change that drops one would silently break
+        # the portal it was routed to. gtk = FileChooser + UI portals,
+        # wlr = Screenshot, gnome = ScreenCast (per-window screen sharing).
+        - xdg-desktop-portal
+        - xdg-desktop-portal-gtk
+        - xdg-desktop-portal-wlr
+        - xdg-desktop-portal-gnome
         # session niceties
         - brightnessctl
         - playerctl

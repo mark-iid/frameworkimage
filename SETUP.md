@@ -604,9 +604,23 @@ recoverable from the code alone.
   its delegation fails (`The name is not activatable`) and the *calling* app hangs on a
   file dialog that never appears (hit with Nextcloud's "Choose a different folder"). Baked
   `/etc/xdg-desktop-portal/niri-portals.conf` prefers **gtk** (implements FileChooser +
-  all UI portals; works on wlroots), keeps screencast/screenshot on wlr and secrets on
+  all UI portals; works on wlroots), keeps Screenshot on wlr and secrets on
   gnome-keyring; dark mode still flows via the gtk Settings portal. A live per-user copy
   in `~/.config/xdg-desktop-portal/` applies the same fix before the image lands.
+- **ScreenCast goes to gnome, deliberately (per-window screen sharing):** it is the one
+  portal routed to xdg-desktop-portal-**gnome**, against the grain of the fix above.
+  xdg-desktop-portal-wlr can only offer a *whole output*, so Teams/Meet could not share
+  a single window. This is delegation-safe where FileChooser was not: niri itself owns
+  `org.gnome.Mutter.ScreenCast` — the interface that backend drives — so there is no
+  absent GNOME session to hang on. Verify with `busctl --user list | grep Mutter`; niri
+  should own `org.gnome.Mutter.ScreenCast`, and upstream niri lists xdg-desktop-portal-gnome
+  as *required* for screencasting. Two limits come with it: **Screenshot must stay on
+  wlr** (xdp-gnome's Screenshot wants `org.gnome.Shell.Screenshot`, which niri does not
+  own — routing it to gnome reintroduces the hang), and the **RemoteDesktop portal is
+  unavailable** (no `org.gnome.Mutter.RemoteDesktop` owner), so screen sharing works but
+  remote input control — Teams "give control" — does not. All four portal packages are
+  pinned in `recipes/recipe.yml` rather than inherited from the base, since the config
+  names each backend by hand.
 - **Speaker DSP (EasyEffects):** `cab404/framework-dsp` presets are installed to
   `~/.var/app/com.github.wwmm.easyeffects/config/easyeffects/{output,irs}` (the three
   output presets + the convolver impulse-responses; `%CFG%` in each preset is rewritten
