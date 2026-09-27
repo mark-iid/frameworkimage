@@ -1,0 +1,184 @@
+###
+# kb3lyb-sway: EVERY THUMBNAILER DISABLED.
+#
+# Generated from tumbler's own shipped /etc/xdg/tumbler/tumbler.rc (4.20.1) with
+# every Disabled=false flipped to true, and nothing else changed — section list,
+# priorities and upstream comments are left as they are so a diff against the
+# rpm's copy stays readable. 11 plugin sections, all now Disabled=true.
+# ([CoverThumbnailer] already shipped disabled upstream; the other 10 were flipped.)
+#
+# WHY A FULL-FILE REPLACEMENT, AND THE MAINTENANCE COST: this path is owned by the
+# tumbler rpm, so the baked copy wins on a bump — which means a NEW plugin section
+# added upstream would be absent here and therefore ENABLED by its own default.
+# Re-check the section list when tumbler's version changes:
+#   grep '^\[' /etc/xdg/tumbler/tumbler.rc      # live (this file, once deployed)
+#   dnf download tumbler && rpm2cpio *.rpm | cpio -i --to-stdout ./etc/xdg/tumbler/tumbler.rc | grep '^\['
+# As of 4.20.1: JPEG, Raw, Pixbuf, Cover, Ffmpeg, Gst, Font, Poppler, Odf, Epub,
+# Desktop.
+#
+# The other half of this is misc-thumbnail-mode=NEVER in
+# files/system/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/thunar.xml. Thunar is the
+# only consumer on this machine, so that alone stops thumbnails in practice; this
+# file is what stops anything ELSE speaking the XDG thumbnail D-Bus API from
+# getting one generated. Both matter, because tumbler's cache plugin
+# (tumbler-xdg-cache.so) writes to TWO places: $XDG_CACHE_HOME/thumbnails, and a
+# .sh_thumbnails/ directory beside the source file per the shared-thumbnail spec.
+# The second lands wherever the file lives — /var/mnt/data included — so it is
+# outside anything a permissions clamp on ~/.cache can cover. Not generating is
+# the only control that reaches it.
+#
+# TO RE-ENABLE: delete this file from files/system/ and rebuild; the rpm's copy
+# returns. A harder kill, if tumblerd should not even start, would be to override
+# /usr/share/dbus-1/services/org.xfce.Tumbler.Thumbnailer1.service — deliberately
+# NOT done, because a plugin-less tumbler fails softly (no thumbnail) whereas an
+# unavailable D-Bus name can surface as an error in callers.
+###
+
+###
+# [TypeNameOfPlugin]
+# Disabled:    Set to true to avoid loading the plugin. By default all
+#              plugins are loaded.
+# Priority:    Priority of the plugin if more plugins support the same
+#              uri-scheme / mime-type combination.
+# Locations:   ;-separated path list the plugin will be used in. If the
+#              source file is not a child of one of the locations, the
+#              plugin won't be used and another plugin with a lower
+#              priority will be tried.
+#              Absolute paths, environment variables, ~/ and ~username/
+#              are allowed. Leave empty to allow all locations.
+# Excludes:    ;-separated path list the plugin will not be used in.
+#              Absolute paths, environment variables, ~/ and ~username/
+#              are allowed. Leave empty to exclude nothing. Please note
+#              that paths in Excludes precede those in Locations.
+# MaxFileSize: Maximum size of the source file the plugin will still
+#              try to generate a plugin for. The size is in bytes,
+#              0 disables the check.
+#
+# For more information see https://docs.xfce.org/xfce/tumbler/start
+###
+
+###
+# Image Thumbnailers
+###
+
+# Jpeg thumbnailer (from exif data if possible)
+[JPEGThumbnailer]
+Disabled=true
+Priority=3
+Locations=
+Excludes=
+MaxFileSize=0
+
+# RAW image files using libopenraw (the libopenraw pixbuf loader is kind of
+# broken, hence the priority)
+[RawThumbnailer]
+Disabled=true
+Priority=3
+Locations=
+Excludes=
+MaxFileSize=0
+
+# Supports all type GdkPixbuf supports
+[PixbufThumbnailer]
+Disabled=true
+Priority=2
+Locations=
+Excludes=
+MaxFileSize=0
+
+###
+# Video Thumbnailers
+###
+
+# Download cover from omdbapi.com or themoviedb.org if an
+# API key is given. This plugin is disabled because it
+# sends your (private) movie names over the internet.
+[CoverThumbnailer]
+Disabled=true
+Priority=3
+Locations=~/movies
+Excludes=
+MaxFileSize=0
+#APIKey=your-api-key-from-themoviedb.org
+
+# ffmpegthumbnailer plugin
+[FfmpegThumbnailer]
+Disabled=true
+Priority=2
+Locations=
+Excludes=
+MaxFileSize=0
+
+# GStreamer plugin
+[GstThumbnailer]
+Disabled=true
+Priority=1
+Locations=
+Excludes=
+MaxFileSize=0
+
+###
+# Document Thumbnailers
+###
+
+# FreeType thumbnailer
+[FontThumbnailer]
+Disabled=true
+Priority=1
+Locations=
+Excludes=
+MaxFileSize=0
+
+
+# PDF/PS thumbnailer
+[PopplerThumbnailer]
+Disabled=true
+Priority=1
+Locations=
+Excludes=
+MaxFileSize=0
+
+# Open document thumbnailer (ODF)
+[OdfThumbnailer]
+Disabled=true
+Priority=1
+Locations=
+Excludes=
+MaxFileSize=0
+
+# Epub thumbnailer
+[EpubThumbnailer]
+Disabled=true
+Priority=1
+Locations=
+Excludes=
+MaxFileSize=0
+
+###
+# External Thumbnailers
+###
+
+# Thumbnailers provided by .thumbnailer desktop files located in $XDG_DATA_HOME/thumbnailers/ and
+# $XDG_DATA_DIRS/thumbnailers/
+#
+# They can handle any mime type, depending on the contents of each particular desktop file.
+# Their priority is defined here globally and by default lower than that of all internal
+# thumbnailers.
+# These priorities should in any case remain different, otherwise there is no way to know in
+# advance which of the internal or external thumbnailer will be prioritized in case of a mime type
+# match.
+#
+# In case of several desktop files with the same name in the thumbnailer directories, the one
+# placed in the highest priority directory override all the others.
+#
+# All the properties below can be overridden per desktop file, in the "X-Tumbler Settings" group,
+# for example:
+# [X-Tumbler Settings]
+# Priority=4
+# MaxFileSize=104857600
+[DesktopThumbnailer]
+Disabled=true
+Priority=0
+Locations=
+Excludes=
+MaxFileSize=0

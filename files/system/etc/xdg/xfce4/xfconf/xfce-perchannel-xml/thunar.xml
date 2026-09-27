@@ -21,4 +21,22 @@
 
 <channel name="thunar" version="1.0">
   <property name="misc-exec-shell-scripts-by-default" type="bool" value="true"/>
+
+  <!--
+    Thumbnails off. Thunar is the only thing on this machine that asks for them,
+    so NEVER means tumbler is never invoked and nothing is written to
+    $XDG_CACHE_HOME/thumbnails or to a .sh_thumbnails/ directory beside the
+    source files. files/system/etc/xdg/tumbler/tumbler.rc disables every
+    thumbnailer plugin as the second half of this; either alone leaves a path
+    open, because any other XDG thumbnail consumer would still trigger tumbler.
+
+    PER-USER FILE WINS, per the note above: an account whose
+    ~/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml already carries
+    misc-thumbnail-mode keeps its own value and ignores this. Changing it on a
+    live machine is therefore a separate step:
+      xfconf-query -c thunar -p /misc-thumbnail-mode -s THUNAR_THUMBNAIL_MODE_NEVER
+    Values are NEVER / ONLY_LOCAL / ALWAYS; ONLY_LOCAL still caches, it just
+    skips remote filesystems.
+  -->
+  <property name="misc-thumbnail-mode" type="string" value="THUNAR_THUMBNAIL_MODE_NEVER"/>
 </channel>
