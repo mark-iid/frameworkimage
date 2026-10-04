@@ -570,7 +570,7 @@ modules:
   #
   # Running last makes our copy authoritative regardless. It must still come
   # BEFORE the `systemd` module below, which enables unit files that this module
-  # is what installs (kb3lyb-power-profile.timer, kb3lyb-console-font.service).
+  # is what installs (kb3lyb-power-profile.timer, kb3lyb-gid-reconcile.service).
   # Note the flatpak/brew units are NOT among those: they live in files/systemd/
   # and are installed by the `systemd` module itself, not from here. What this
   # module does supply for them is /usr/bin/kb3lyb-flatpak-update, the wrapper
@@ -636,9 +636,9 @@ modules:
     system:
       enabled:
         - greetd.service
-        - kb3lyb-console-font.service   # re-set the big HiDPI console font after
-                                        # vconsole-setup (installer's /etc/vconsole.conf
-                                        # otherwise masks the baked FONT= default)
+        # kb3lyb-console-font.service was here and is REMOVED: it failed every
+        # boot (setfont ran while the VT was still on the dummy console). The big
+        # font is now the vconsole.font= karg in usr/lib/bootc/kargs.d/00-kb3lyb.toml.
         - tailscaled.service
         - rpm-ostreed-automatic.timer
         - flatpak-update.timer
@@ -712,6 +712,17 @@ modules:
         # has been red for a month looks exactly like one that has been green.
         # See /usr/bin/kb3lyb-image-age.
         - kb3lyb-image-age.timer
+      masked:
+        # Thumbnails are off (thunar.xml NEVER, every tumbler.rc plugin disabled),
+        # so the thumbnailer has nothing to do. It was still started over D-Bus:
+        # Thunar asks GetSupported at startup regardless of thumbnail mode, and a
+        # plugin-less tumblerd 4.20.1 SEGVs answering it
+        # (tumbler_service_get_supported_cb -> g_variant_new). That made a
+        # coredump on most Thunar launches (5 on 2026-10-03 alone). Thunar
+        # hard-requires tumbler, so the package cannot go. Masking the unit makes
+        # the D-Bus activation (SystemdService=tumblerd.service) fail cleanly, and
+        # Thunar gets the same error it got from the crash, without the crash.
+        - tumblerd.service
 
   # Postconditions. MUST BE THE LAST module that can fail (signing follows and
   # only signs what was built). A green depsolve says the recipe resolved; it says

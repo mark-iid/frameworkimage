@@ -358,13 +358,15 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       `sfdisk`/`cryptsetup` (the image has no `sgdisk`/`parted`). Confirm auto-unlock
       survives a reboot: `findmnt /var/mnt/data`.
 - [ ] Evolution: use the **Microsoft 365 / Graph** account type, not EWS (§3).
-- [x] **Big console font — now automatic.** `kb3lyb-console-font.service` runs
-      `setfont latarcyrheb-sun32` after `systemd-vconsole-setup`, so the ~2x HiDPI font
+- [x] **Big console font — now automatic.** The image carries the karg
+      `vconsole.font=latarcyrheb-sun32` (`usr/lib/bootc/kargs.d/00-kb3lyb.toml`), which
+      `systemd-vconsole-setup` prefers over `/etc/vconsole.conf`, so the ~2x HiDPI font
       applies out of the box even though the installer's `/etc/vconsole.conf` (`eurlatgr`)
-      masks the baked `FONT=` default. No manual step needed anymore. (Historically this
-      required `cp /usr/etc/vconsole.conf /etc/` — the service replaced that.)
+      masks the baked `FONT=` default. No manual step needed. (History: first a manual
+      `cp /usr/etc/vconsole.conf /etc/`, then `kb3lyb-console-font.service`, which failed
+      every boot because it ran `setfont` before fbcon had taken over the VT.)
       Still too small on the 200-DPI panel? `solar24x32` is wider (24x32) — swap the name
-      in `/etc/vconsole.conf`.
+      in the karg; editing `/etc/vconsole.conf` alone has no effect while the karg is set.
 - [ ] **Boot style — graphical splash is the default (and preferred).** The base
       cmdline carries `rhgb quiet`, i.e. the Plymouth graphical splash + a graphical LUKS
       passphrase box. Keep it. If a fresh reinstall or an earlier experiment left `rhgb`

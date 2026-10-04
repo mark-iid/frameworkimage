@@ -43,6 +43,22 @@
 #   less write throughput, and zstd decompression is level-independent so that
 #   cost buys nothing back on reads. L1 is also Fedora's btrfs default. See
 #   DESIGN §1 for the full table and the defragment warning.
+#
+# vconsole.font=latarcyrheb-sun32 — the ~2x HiDPI console font for the boot text
+#   and the tuigreet login. The image's /etc/vconsole.conf sets the same FONT=,
+#   but on a real install that file is the installer's (eurlatgr) and ostree
+#   treats it as machine-owned, so the baked value never reaches the machine.
+#   systemd-vconsole-setup gives this karg precedence over vconsole.conf
+#   (vconsole.conf(5), KERNEL COMMAND LINE), which settles that without touching
+#   /etc.
+#   It replaces kb3lyb-console-font.service, which ran `setfont` after
+#   vconsole-setup and failed on EVERY boot: with `quiet`, fbcon defers its
+#   takeover until the first console output, so at ~8.9s the VT was still on the
+#   dummy console, which has no font support, and setfont exited 71 ("Unable to
+#   load such font with such kernel version"). fbcon took over ~40 ms later; the
+#   vtcon add event re-runs systemd-vconsole-setup (90-vconsole.rules), and that
+#   run is what actually set the font. With the karg, that re-run picks the right
+#   font on its own, whatever is in /etc/vconsole.conf, and the race is gone.
 
 kargs = [
     "amdgpu.dcdebugmask=0x10",
@@ -50,4 +66,5 @@ kargs = [
     "loglevel=3",
     "quiet",
     "rootflags=compress=zstd:1",
+    "vconsole.font=latarcyrheb-sun32",
 ]

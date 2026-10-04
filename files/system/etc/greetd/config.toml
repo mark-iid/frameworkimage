@@ -6,7 +6,8 @@
 # tuigreet launches `niri --session` — niri as a proper session (imports env, brings
 # up graphical-session.target) so pipewire/portals/user services come up correctly.
 #
-# The big login font comes from /etc/vconsole.conf (latarcyrheb-sun32), not here.
+# The big login font comes from the vconsole.font=latarcyrheb-sun32 karg
+# (usr/lib/bootc/kargs.d/00-kb3lyb.toml), not here.
 #
 # LOGIN-CRITICAL: a bad greetd command breaks login. The wrapper's color step is
 # guarded and `exec tuigreet` is unconditional, but verify on the machine after

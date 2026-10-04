@@ -200,6 +200,12 @@ assert "jq present (kb3lyb-image-age and the dotfiles comms script need it)" \
 # Losing it does not fail anything at build time; it hangs the laptop.
 assert_file_has "amdgpu PSR workaround karg present" \
   /usr/lib/bootc/kargs.d/00-kb3lyb.toml 'amdgpu\.dcdebugmask=0x10'
+# The karg is the only thing that gets the big console font past the installer's
+# /etc/vconsole.conf, and the font file it names has to exist in the image.
+assert_file_has "HiDPI console font karg present" \
+  /usr/lib/bootc/kargs.d/00-kb3lyb.toml 'vconsole\.font=latarcyrheb-sun32'
+assert "console font latarcyrheb-sun32 shipped" \
+  sh -c 'ls /usr/lib/kbd/consolefonts/latarcyrheb-sun32.* >/dev/null 2>&1'
 
 # --- Icon font for the bar ----------------------------------------------------
 # waybar's style.css asks for "Symbols Nerd Font" by name; without it every
@@ -210,7 +216,7 @@ assert "Symbols Nerd Font installed for waybar" \
 # --- Unit enablement ----------------------------------------------------------
 # `systemctl is-enabled` reads unit files and symlinks; it needs no running
 # manager, so it works inside the build container.
-for u in greetd.service kb3lyb-console-font.service tailscaled.service \
+for u in greetd.service tailscaled.service \
          rpm-ostreed-automatic.timer flatpak-update.timer kb3lyb-power-profile.timer; do
   assert "system unit enabled: $u" sh -c "systemctl is-enabled '$u' >/dev/null 2>&1"
 done
@@ -218,6 +224,10 @@ for u in brew-upgrade.timer flatpak-update-user.timer kb3lyb-image-age.timer; do
   assert "user unit enabled globally: $u" \
     sh -c "systemctl --global is-enabled '$u' >/dev/null 2>&1"
 done
+# A plugin-less tumblerd segfaults when Thunar asks it GetSupported; see the
+# recipe's systemd module.
+assert "tumblerd masked for users" \
+  sh -c '[ "$(systemctl --global is-enabled tumblerd.service 2>/dev/null)" = masked ]'
 # The base ships SDDM; greetd replaces it. Both enabled would race for the tty.
 assert "sddm disabled in favour of greetd" \
   sh -c '[ "$(systemctl is-enabled sddm.service 2>/dev/null)" != enabled ]'
