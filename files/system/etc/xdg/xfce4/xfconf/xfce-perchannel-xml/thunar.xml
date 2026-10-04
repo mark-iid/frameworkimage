@@ -24,11 +24,14 @@
 
   <!--
     Thumbnails off. Thunar is the only thing on this machine that asks for them,
-    so NEVER means tumbler is never invoked and nothing is written to
+    so NEVER means no thumbnail is requested and nothing is written to
     $XDG_CACHE_HOME/thumbnails or to a .sh_thumbnails/ directory beside the
     source files. files/system/etc/xdg/tumbler/tumbler.rc disables every
     thumbnailer plugin as the second half of this; either alone leaves a path
     open, because any other XDG thumbnail consumer would still trigger tumbler.
+    NEVER does not stop Thunar from contacting tumbler: it still asks
+    GetSupported at startup, which crashed the plugin-less tumblerd, so
+    tumblerd.service is also masked in the recipe's systemd module.
 
     PER-USER FILE WINS, per the note above: an account whose
     ~/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml already carries

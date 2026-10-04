@@ -27,11 +27,15 @@
 # outside anything a permissions clamp on ~/.cache can cover. Not generating is
 # the only control that reaches it.
 #
-# TO RE-ENABLE: delete this file from files/system/ and rebuild; the rpm's copy
-# returns. A harder kill, if tumblerd should not even start, would be to override
-# /usr/share/dbus-1/services/org.xfce.Tumbler.Thumbnailer1.service — deliberately
-# NOT done, because a plugin-less tumbler fails softly (no thumbnail) whereas an
-# unavailable D-Bus name can surface as an error in callers.
+# tumblerd itself is also MASKED as a user unit (recipe `systemd` module), so it
+# never starts. This file was once meant to be the whole answer, on the theory
+# that a plugin-less tumbler fails softly (no thumbnail) — it does not: 4.20.1
+# segfaults answering GetSupported, which Thunar calls at every startup even with
+# thumbnails off. The mask turns that crash into a clean D-Bus activation error.
+# This file stays as the backstop in case the mask is ever dropped.
+#
+# TO RE-ENABLE: drop the tumblerd.service mask, delete this file from
+# files/system/ and rebuild; the rpm's copy returns.
 ###
 
 ###
