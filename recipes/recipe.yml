@@ -326,8 +326,8 @@ modules:
         # (`g dialout 18`) and a lock directory /run/lock/picocom at 0775
         # root:dialout, where it writes a UUCP lockfile on every connect. So
         # `dialout` membership is required EVEN THOUGH files/system/etc/udev/
-        # rules.d/70-flipper-zero.rules grants the device node itself via
-        # uaccess — the udev rule covers the tty, the group covers the lockfile.
+        # rules.d/70-flipper-zero.rules and 70-espressif.rules grant the device
+        # node itself via uaccess — the udev rule covers the tty, the group covers the lockfile.
         # Without the group picocom fails at startup, not at open time, which
         # reads as a broken cable rather than a permissions problem.
         #

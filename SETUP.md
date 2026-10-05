@@ -441,9 +441,9 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       This persists across image updates: `dialout` (GID 18) comes from `/usr/lib/group`
       in the image, but the *membership* is written to `/etc/group`, which is machine
       state on bootc, not part of the image. Redo it after a fresh reinstall only.
-      **Still needed even for the Flipper**, which has its own baked udev rule
-      (`files/system/etc/udev/rules.d/70-flipper-zero.rules`) granting the device node
-      via `uaccess`: `picocom` writes a UUCP lockfile into `/run/lock/picocom`, which
+      **Still needed even for the Flipper and native-USB ESP32 boards**, which have
+      their own baked udev rules (`files/system/etc/udev/rules.d/70-flipper-zero.rules`,
+      `70-espressif.rules`) granting the device node via `uaccess`: `picocom` writes a UUCP lockfile into `/run/lock/picocom`, which
       is `0775 root:dialout`, so it fails at startup rather than at open. The rule and
       the group cover two different things — read both before concluding either is
       redundant.

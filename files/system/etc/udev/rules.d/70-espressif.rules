@@ -1,0 +1,23 @@
+# Espressif ESP32-family boards — hand the USB interfaces to the seat-local
+# user, and keep ModemManager's hands off them. Same shape as
+# 70-flipper-zero.rules; read that file's header for the reasoning behind
+# uaccess over MODE="0666" and behind ID_MM_DEVICE_IGNORE.
+#
+# Matched on the whole Espressif vendor id (303a), not a PID list. The chips
+# enumerate under several PIDs depending on chip and mode:
+#   303a:1001  USB-Serial-JTAG on C3/S3/C6/H2 (the M32 Pocket shows up as this):
+#              a CDC-ACM tty -> /dev/ttyACM*, plus a vendor-specific JTAG
+#              interface that is NOT a tty, so `dialout` does nothing for it and
+#              OpenOCD/WebUSB debugging is root-only without this rule
+#   303a:0002  S2/S3 ROM download mode over native USB (TinyUSB CDC)
+#   303a:80xx+ PIDs Espressif sublicenses to board makers running TinyUSB firmware
+# A PID list would miss the next board. 303a is Espressif's own VID, so the
+# wildcard only reaches ESP hardware, and uaccess never grants more than the
+# seated user.
+#
+# Boards behind a CP210x/CH340 bridge (10c4/1a86) enumerate as the bridge, not
+# as 303a, and are not covered here; they get a ttyUSB* that `dialout` handles.
+#
+# Numbered below 73 for the same reason as the Flipper rule: 73-seat-late.rules
+# acts on the uaccess tag, and a higher number silently drops the ACL.
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="303a", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"
