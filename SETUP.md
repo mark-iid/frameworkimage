@@ -357,6 +357,19 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       + ext4, `/etc/crypttab` + `/etc/fstab` (both `nofail`). Done 2026-07-31 with
       `sfdisk`/`cryptsetup` (the image has no `sgdisk`/`parted`). Confirm auto-unlock
       survives a reboot: `findmnt /var/mnt/data`.
+- [x] **Root LUKS unlocks from the TPM, bound to PCR 7 only.** PCR 7 is the Secure
+      Boot state (`SecureBoot`, `PK`/`KEK`/`db`/`dbx`, and which certs verified
+      shim), so kernel, initramfs and bootloader updates do not break it. Enroll,
+      then save a baseline event log to diff against if it ever prompts again:
+      ```
+      sudo systemd-cryptenroll --wipe-slot=tpm2 --tpm2-device=auto --tpm2-pcrs=7 \
+        /dev/disk/by-uuid/7cfe0992-081a-4c94-9de7-9abeb1dd215e
+      sudo cat /sys/kernel/security/tpm0/binary_bios_measurements > ~/tpm-eventlog-baseline.bin
+      ```
+      Check the binding with `sudo cryptsetup luksDump <dev>` (under `Tokens:`,
+      `tpm2-hash-pcrs: 7`). Run these from a real terminal — sudo needs a tty to
+      prompt on. Re-enrolling after a firmware
+      Secure Boot update has a timing trap; see §8.
 - [ ] Evolution: use the **Microsoft 365 / Graph** account type, not EWS (§3).
 - [x] **Big console font — now automatic.** The image carries the karg
       `vconsole.font=latarcyrheb-sun32` (`usr/lib/bootc/kargs.d/00-kb3lyb.toml`), which
@@ -525,6 +538,23 @@ Protect the backup itself:
   red, an update is staged but never applied (check `rpm-ostree status`), or the
   laptop simply has not been on. Override the threshold with
   `KB3LYB_IMAGE_MAX_AGE_DAYS=<n>`.
+- **Firmware Secure Boot updates cost one passphrase prompt — re-enroll a boot
+  later, never in the same boot.** `fwupdmgr update` can write `dbx` (revocations)
+  or `db`/`KEK` (the Microsoft 2023 CA rollout). The firmware variable changes
+  immediately, but PCR 7 is only re-measured at the next boot, so the TPM key
+  stops matching. The order that works:
+  1. apply the update, reboot;
+  2. type the passphrase at the prompt (journal shows `TPM policy does not match
+     current system state`);
+  3. in *that* boot, re-enroll and save a new baseline (commands in §6).
+
+  Re-enrolling in the same boot as the update seals to the pre-update value and
+  just moves the prompt to the next boot — verified the hard way, 2026-10-04.
+  fwupd also logged that dbx update (20260402 → 20260707) as failed (`expected
+  20260707 and got (null)`) although the firmware took it, so it may be offered
+  again; expect another prompt if it is reapplied. To see what changed after an
+  unexpected prompt, save the event log *before* rebooting and diff its PCR 7
+  entries against the baseline with `tpm2_eventlog`.
 
 ---
 
