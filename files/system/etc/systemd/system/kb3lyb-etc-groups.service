@@ -1,0 +1,13 @@
+[Unit]
+Description=Copy image-only groups (dialout) into /etc/group so usermod can use them
+Documentation=file:///usr/bin/kb3lyb-etc-groups
+After=systemd-sysusers.service
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/kb3lyb-etc-groups
+
+[Install]
+WantedBy=multi-user.target

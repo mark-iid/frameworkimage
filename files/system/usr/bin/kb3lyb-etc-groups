@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Copy selected groups from the image's /usr/lib/group into /etc/group, so that
+# `usermod -aG <group>` can enroll the user in them.
+#
+# WHY. On an rpm-ostree/bootc host, groups like `dialout` exist only in
+# /usr/lib/group, which glibc reads through nss-altfiles. getent sees them, but
+# usermod edits /etc/group only, so it has no line to add the user to. On the
+# 2026-10-11 reinstall, `usermod -aG dialout,kismet,wireshark` enrolled the
+# other two and left dialout empty. The fix by hand was to copy the line over
+# first (SETUP §6); this does that at boot.
+#
+# WHY NOT sysusers.d. On the live root, systemd-sysusers resolves the name through
+# NSS, finds the altfiles entry, and treats the group as already present, so it
+# never writes the /etc/group line.
+#
+# Copies the line verbatim, so the GID stays the image's and nothing on disk
+# changes meaning. Enrolling the user stays a manual step: the account does
+# not exist at build time, and which groups a person belongs in is their call.
+# Idempotent; does nothing once each group has its /etc line.
+set -uo pipefail
+
+GROUPS_TO_COPY=(dialout)
+
+ETC_GROUP="${ETC_GROUP:-/etc/group}"
+ETC_GSHADOW="${ETC_GSHADOW:-/etc/gshadow}"
+USR_GROUP="${USR_GROUP:-/usr/lib/group}"
+LOCK="${LOCK:-/etc/.pwd.lock}"   # shadow-utils' lock, so this cannot race usermod/groupadd
+
+rc=0
+exec 9>>"$LOCK"
+flock 9
+
+for name in "${GROUPS_TO_COPY[@]}"; do
+  grep -q "^${name}:" "$ETC_GROUP" && continue          # steady state
+  line=$(grep -m1 "^${name}:" "$USR_GROUP") || {
+    echo "kb3lyb-etc-groups: $name not in $USR_GROUP, skipping" >&2
+    continue
+  }
+  gid=$(cut -d: -f3 <<<"$line")
+  clash=$(awk -F: -v g="$gid" '$3 == g { print $1; exit }' "$ETC_GROUP")
+  if [ -n "$clash" ]; then
+    echo "kb3lyb-etc-groups: cannot copy $name; gid $gid already used by '$clash' in $ETC_GROUP" >&2
+    rc=1
+    continue
+  fi
+  printf '%s\n' "$line" >>"$ETC_GROUP"
+  if [ -f "$ETC_GSHADOW" ] && ! grep -q "^${name}:" "$ETC_GSHADOW"; then
+    printf '%s:!::\n' "$name" >>"$ETC_GSHADOW"
+  fi
+  echo "kb3lyb-etc-groups: copied $name (gid $gid) into $ETC_GROUP"
+done
+
+exit "$rc"

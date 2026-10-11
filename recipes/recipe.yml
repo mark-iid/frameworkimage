@@ -653,6 +653,10 @@ modules:
         # laptop that already allocated `kismet` at 960. Idempotent — once every
         # pinned group holds its pinned number this does nothing, every boot.
         - kb3lyb-gid-reconcile.service
+        # Copies dialout (GID 18) from /usr/lib/group into /etc/group so that
+        # `usermod -aG dialout` has a line to edit. Before this, a fresh install
+        # left dialout altfiles-only and usermod skipped it (2026-10-11).
+        - kb3lyb-etc-groups.service
         - kb3lyb-power-profile.timer   # auto power profile: perf on AC, balanced on
                                        # battery, power-saver <20% (files/.../usr/bin
                                        # + udev rule + polkit rule)
