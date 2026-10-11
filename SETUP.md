@@ -227,6 +227,43 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
 
 ## 6. First-boot / post-install
 
+- [ ] **Move an ISO install onto the signed GHCR image. Do this first.** An ISO from
+      §4 installs the *locally built* image, so the host tracks
+      `ostree-unverified-registry:localhost/kb3lyb-sway:<ver>`, which nothing
+      serves. `rpm-ostree upgrade` fails with `pinging container registry localhost
+      ... connection refused`, and so does every automatic update, silently
+      (`rpm-ostree status` shows `no runs since boot`). Check with
+      `rpm-ostree status`. If the origin says `localhost`:
+      ```
+      sudo ostree admin pin 0
+      sudo rpm-ostree rebase ostree-image-signed:docker://ghcr.io/mark-iid/kb3lyb-sway:latest
+      systemctl reboot
+      ```
+      **An ISO built before 2026-10-11 needs one more step first.** `build-local.sh`
+      then defaulted to namespace `kb3lyb`, so the image's signing policy trusts
+      only `ghcr.io/kb3lyb/kb3lyb-sway`, and its default is `reject`. The rebase
+      above (and README's `ostree-unverified-registry:` first step) is refused
+      outright. Add the `mark-iid` entry by hand, with the same key and rule, before
+      rebasing:
+      ```
+      R=ghcr.io/mark-iid/kb3lyb-sway P=/etc/containers/policy.json
+      sudo cp -p $P $P.pre-ghcr-rebase
+      jq --arg r $R '.transports.docker[$r] = .transports.docker["ghcr.io/kb3lyb/kb3lyb-sway"]' \
+        $P.pre-ghcr-rebase | sudo tee $P >/dev/null
+      printf 'docker:\n  %s:\n    use-sigstore-attachments: true\n' $R \
+        | sudo tee /etc/containers/registries.d/mark-iid-kb3lyb-sway.yaml
+      ```
+      After rebooting into the GHCR deployment, put the policy back to the image's
+      copy, so the hand edit does not hide the next policy or key change from
+      `/etc` merging:
+      ```
+      sudo cp /usr/etc/containers/policy.json /etc/containers/policy.json
+      sudo rm /etc/containers/policy.json.pre-ghcr-rebase
+      ```
+      The registries.d file needs nothing: the image ships the same file, with the
+      same bytes, under the same name. Done this way on 2026-10-11; the
+      `localhost` deployment stays pinned as the fallback until the GHCR one has
+      proven itself (`sudo ostree admin pin --unpin 1`).
 - [ ] `kb3lyb-bootstrap` — clones dotfiles (prompts for a token), stows them, installs
       brew + Brewfile, SDKMAN, JetBrains Toolbox, and native Discord into `$HOME` (§6).
 - [ ] `fprintd-enroll` — re-enroll fingerprints (not portable, §10).
