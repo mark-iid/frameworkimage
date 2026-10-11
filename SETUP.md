@@ -230,6 +230,14 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
 - [ ] `kb3lyb-bootstrap` — clones dotfiles (prompts for a token), stows them, installs
       brew + Brewfile, SDKMAN, JetBrains Toolbox, and native Discord into `$HOME` (§6).
 - [ ] `fprintd-enroll` — re-enroll fingerprints (not portable, §10).
+- [ ] **Timezone.** The 2026-10-11 install came up on UTC with no `/etc/localtime`
+      at all: Anaconda never set one. It is machine-owned `/etc`, so the image
+      cannot carry it. No sudo needed; polkit allows it for the seated user:
+      ```
+      timedatectl set-timezone America/New_York
+      timedatectl | grep 'Time zone'      # expect: America/New_York (EDT/EST)
+      ```
+      If the waybar clock still shows UTC afterwards, restart waybar (not SIGUSR2).
 - [ ] **Give the login keyring a REAL password.** This reverses the old
       "passwordless keyring" step, which stored every Secret Service credential
       (Evolution M365 OAuth tokens, Nextcloud, VS Code) encrypted with the empty
