@@ -465,6 +465,11 @@ modules:
         - stow                              # dotfiles deploy (DESIGN §6/§9.6)
         - zsh                               # login shell the dotfiles/.zshrc target (§6);
                                             # kb3lyb-bootstrap ends by telling you to open zsh
+        - git-credential-libsecret          # dotfiles .gitconfig: credential.helper = libsecret.
+                                            # HTTPS tokens (git.mystikos.org, no public SSH) go in
+                                            # the login keyring, not plain-text ~/.git-credentials.
+                                            # Without it git errors "credential-libsecret is not a
+                                            # git command" and stores nothing (2026-10-11).
 
   # Evolution (mail) — the one GUI app layered NATIVE rather than a flatpak (the
   # §8.5 default). Native gives reliable Microsoft 365 / Graph OAuth against the
