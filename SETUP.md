@@ -353,17 +353,50 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
 - [ ] Restore by hand, encrypted (never via repo/image, §10): `~/.ssh`, `~/.gnupg`,
       `~/.config/rclone/rclone.conf`, the atuin key (`~/.local/share/atuin/key`), then
       `atuin login` to resume sync.
-- [x] Recreate `/var/mnt/data`: LUKS2 (keyfile auto-unlock via `/etc/luks/data.key`)
-      + ext4, `/etc/crypttab` + `/etc/fstab` (both `nofail`). Done 2026-07-31 with
-      `sfdisk`/`cryptsetup` (the image has no `sgdisk`/`parted`). Confirm auto-unlock
-      survives a reboot: `findmnt /var/mnt/data`.
-- [x] **Root LUKS unlocks from the TPM, bound to PCR 7 only.** PCR 7 is the Secure
-      Boot state (`SecureBoot`, `PK`/`KEK`/`db`/`dbx`, and which certs verified
-      shim), so kernel, initramfs and bootloader updates do not break it. Enroll,
-      then save a baseline event log to diff against if it ever prompts again:
+- [ ] **Recreate `/var/mnt/data`** — redo on every reinstall. LUKS2 + ext4 on the
+      1TB expansion card, auto-unlocked by the keyfile `/etc/luks/data.key`. The
+      keyfile, `/etc/crypttab` and `/etc/fstab` are all machine-owned `/etc`, so a
+      clean install loses all three even when the card itself is untouched. The
+      keyfile was in no backup on 2026-10-11, so that reinstall reformatted the card.
+
+      **Re-attaching a card that still has its volume:** unlock it once with the
+      passphrase and enroll a fresh keyfile (`cryptsetup luksAddKey <part>
+      /etc/luks/data.key`), then add the crypttab/fstab lines below.
+
+      **Fresh format** (as done 2026-10-11). This DESTROYS the card. Address it by
+      serial, never by `sdX`: the backup stick also enumerates as a USB `sd*`.
+      ```
+      P=/dev/disk/by-id/usb-FRMW_1TB_Card_071C58B5628B1E49-0:0-part1
+      sudo wipefs -a $P
+      sudo cryptsetup luksFormat --type luks2 $P           # passphrase -> Bitwarden
+      sudo install -d -m 700 /etc/luks
+      sudo dd if=/dev/urandom of=/etc/luks/data.key bs=512 count=8 status=none
+      sudo chmod 400 /etc/luks/data.key
+      sudo cryptsetup luksAddKey $P /etc/luks/data.key
+      sudo cryptsetup open --key-file /etc/luks/data.key $P data
+      sudo mkfs.ext4 -L data /dev/mapper/data
+      echo "data UUID=$(sudo cryptsetup luksUUID $P) /etc/luks/data.key luks,nofail" \
+        | sudo tee -a /etc/crypttab
+      echo "/dev/mapper/data /var/mnt/data ext4 defaults,nofail,x-systemd.device-timeout=10s 0 2" \
+        | sudo tee -a /etc/fstab
+      sudo mkdir -p /var/mnt/data && sudo systemctl daemon-reload && sudo mount /var/mnt/data
+      sudo chown "$USER:" /var/mnt/data && mkdir /var/mnt/data/nextcloud
+      sudo cryptsetup luksHeaderBackup $P --header-backup-file ~/data-luks-header.img
+      ```
+      Keep the mapper name `data`: DESIGN and the recipe's history notes refer to
+      `systemd-cryptsetup@data.service` by that name. `~/Nextcloud` and the Nextcloud client's
+      sync root point at `/var/mnt/data/nextcloud`. Move the header backup off both the
+      card and this laptop (DESIGN §10), then delete the local copy. Confirm
+      auto-unlock survives a reboot: `findmnt /var/mnt/data`.
+- [ ] **Root LUKS unlocks from the TPM, bound to PCR 7 only.** Redo on every
+      reinstall: the token lives in the LUKS header, which a reinstall recreates, so
+      the UUID changes too (`7cfe0992…` before 2026-10-11, `056877a4…` after). PCR 7
+      is the Secure Boot state (`SecureBoot`, `PK`/`KEK`/`db`/`dbx`, and which certs
+      verified shim), so kernel, initramfs and bootloader updates do not break it.
+      Enroll, then save a baseline event log to diff against if it ever prompts again:
       ```
       sudo systemd-cryptenroll --wipe-slot=tpm2 --tpm2-device=auto --tpm2-pcrs=7 \
-        /dev/disk/by-uuid/7cfe0992-081a-4c94-9de7-9abeb1dd215e
+        /dev/nvme0n1p3      # the root LUKS partition; lsblk -dno UUID needs root to show it
       sudo cat /sys/kernel/security/tpm0/binary_bios_measurements > ~/tpm-eventlog-baseline.bin
       ```
       Check the binding with `sudo cryptsetup luksDump <dev>` (under `Tokens:`,
@@ -380,22 +413,17 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       every boot because it ran `setfont` before fbcon had taken over the VT.)
       Still too small on the 200-DPI panel? `solar24x32` is wider (24x32) — swap the name
       in the karg; editing `/etc/vconsole.conf` alone has no effect while the karg is set.
-- [ ] **Boot style — graphical splash is the default (and preferred).** The base
-      cmdline carries `rhgb quiet`, i.e. the Plymouth graphical splash + a graphical LUKS
-      passphrase box. Keep it. If a fresh reinstall or an earlier experiment left `rhgb`
-      off (text console boot), put it back:
-      ```
-      sudo rpm-ostree kargs --append-if-missing=rhgb
-      systemctl reboot
-      ```
-      Text boot was tried and reverted: dropping `rhgb` (`kargs --delete=rhgb`) shows the
-      console/systemd boot, but the initramfs LUKS prompt then renders on the bare console
-      and the noisy kernel ring buffer overwrites it (looks blank until you type) and bleeds
-      over the tuigreet login screen — Plymouth avoids all of that. **Always keep `quiet`**
-      regardless; if it ever goes missing, `sudo rpm-ostree kargs --append-if-missing=quiet`.
-      These are *local* karg changes (persist across `rpm-ostree upgrade`, not baked — bootc
-      `kargs.d` can only append, not remove the base `rhgb quiet`), so redo after a fresh
-      reinstall. To read the full kernel log after any boot: `journalctl -b -k`.
+- [x] **Boot style: text boot, no Plymouth. Nothing to do.** The image's
+      `00-kb3lyb.toml` carries `plymouth.enable=0 loglevel=3 quiet` (DESIGN §1). That
+      has been true since 2026-07-30. This entry said the opposite until 2026-10-11:
+      "graphical splash is the default (and preferred), keep `rhgb`". Do not follow
+      that advice if it turns up in history. With `plymouth.enable=0`, the `rhgb` that
+      Anaconda leaves on the base cmdline is inert, and so is the duplicate `quiet` the
+      installer adds next to the baked one. Neither needs removing.
+      The old complaint about text boot was the kernel ring buffer overwriting the
+      LUKS prompt and the tuigreet screen. `loglevel=3` and `quiet` are what stop
+      that, and both are baked. With TPM unlock (above) there is normally no prompt at
+      all. Full kernel log after any boot: `journalctl -b -k`.
 - [ ] **Wi-Fi capture groups.** Both `kismet` and `tshark` gate non-root packet
       capture on a group, and the image cannot enroll you — the account is created at
       install time, not at build time. Once, then log out and back in:
