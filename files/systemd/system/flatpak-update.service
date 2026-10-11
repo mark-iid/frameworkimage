@@ -2,8 +2,11 @@
 Description=Update system flatpaks
 Wants=network-online.target
 After=network-online.target
-# Don't fight the first-boot flatpak install (default-flatpaks module).
-After=flatpak-system-update.service
+# Don't fight the first-boot flatpak install (default-flatpaks module). This named
+# flatpak-system-update.service until 2026-10-11, a unit that does not exist, so
+# the ordering was silently a no-op. systemd does not warn about After= on a
+# missing unit; `systemctl list-units --all` showed it as not-found.
+After=system-flatpak-setup.service
 
 [Service]
 Type=oneshot

@@ -2,6 +2,10 @@
 Description=Update user flatpaks (DESIGN §5)
 Wants=network-online.target
 After=network-online.target
+# Don't fight the first-boot per-user flatpak install (default-flatpaks module).
+# Both are user units, so unlike that unit's own After=system-flatpak-setup this
+# ordering actually takes effect.
+After=user-flatpak-setup.service
 
 [Service]
 Type=oneshot
