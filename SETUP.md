@@ -460,8 +460,18 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       capture groups above — the image can create the group but cannot enroll an
       account that does not exist yet at build time. Once, then log out and back in:
       ```
+      grep -q '^dialout:' /etc/group || grep '^dialout:' /usr/lib/group | sudo tee -a /etc/group
       sudo usermod -aG dialout "$USER"
+      getent group dialout          # expect: dialout:x:18:<you>
       ```
+      **The first line is required on a fresh install.** `dialout` exists only in the
+      image's `/usr/lib/group` (nss-altfiles), and `usermod` edits only
+      `/etc/group`, so it has no line to add you to. On the 2026-10-11 reinstall,
+      `usermod -aG dialout,kismet,wireshark` added the other two and left
+      `dialout` empty. kismet and wireshark were unaffected because they are
+      sysusers-created and get real `/etc/group` lines. Copying the line over keeps
+      GID 18, so nothing on disk changes ownership. Check with `getent`, not `id`:
+      `id` reflects only the current login's groups.
       `/usr/lib/udev/rules.d/50-udev-default.rules:47` puts every `tty[A-Z]*[0-9]`
       device — `ttyACM*` (Flipper Zero, ESP32, Klipper host) and `ttyUSB*` (FTDI/CP210x
       cables, radio CAT control) — at `0660 root:dialout`. Without the group you get
