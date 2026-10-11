@@ -20,7 +20,14 @@ RECIPE="${1:-recipes/recipe.yml}"
 # Fedora bump does not leave this pointing at the previous release. See lib.sh.
 TAG="${TAG:-$(recipe_tag "$RECIPE")}"
 REGISTRY="${REGISTRY:-ghcr.io}"
-NAMESPACE="${NAMESPACE:-kb3lyb}"
+# Must match where CI publishes (ghcr.io/<repo owner>). BlueBuild writes the
+# signing policy and registries.d entry for REGISTRY/NAMESPACE into the image, so
+# a wrong value bakes in a policy that trusts nobody's actual images. It was
+# `kb3lyb` until 2026-10-11. An ISO built from that trusted only
+# ghcr.io/kb3lyb/kb3lyb-sway, and with the policy's default of `reject` the
+# installed host could not rebase onto ghcr.io/mark-iid at all until the entry
+# was added by hand (SETUP §6).
+NAMESPACE="${NAMESPACE:-mark-iid}"
 
 echo ">>> Generating Containerfile from ${RECIPE}"
 podman run --rm -v "$PWD":/build:Z -w /build ghcr.io/blue-build/cli:latest \
