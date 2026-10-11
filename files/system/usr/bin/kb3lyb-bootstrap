@@ -196,6 +196,37 @@ if command -v gsettings >/dev/null; then
   gsettings set org.gnome.desktop.interface gtk-theme Adwaita-dark    || warn "could not set gtk-theme"
 fi
 
+# VS Code's secret storage. Electron picks the keyring backend from
+# XDG_CURRENT_DESKTOP, and `niri` is not a value it recognises, so VS Code reports
+# "An OS keyring couldn't be identified" and offers a weaker built-in encryption
+# instead (2026-10-11), even with gnome-keyring running and unlocked. Point it at the
+# Secret Service in ~/.vscode/argv.json, the file VS Code reads its permanent flags
+# from. That file is JSON with comments and VS Code edits it itself (it writes a
+# per-machine crash-reporter-id), so it is patched in place rather than stowed,
+# and only when the key is absent.
+argv="$HOME/.vscode/argv.json"
+if command -v code >/dev/null && ! grep -q '"password-store"' "$argv" 2>/dev/null; then
+  say "pointing VS Code at the Secret Service keyring (~/.vscode/argv.json)"
+  mkdir -p "$HOME/.vscode"
+  [[ -s "$argv" ]] || printf '{\n}\n' > "$argv"
+  /usr/bin/python3 - "$argv" <<'PY' || warn "could not patch $argv; add \"password-store\": \"gnome-libsecret\" by hand"
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+# Blank out comments (same length, so offsets still line up), leaving strings
+# alone so a "//" inside a value is not mistaken for one.
+mask = re.sub(r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*.*?\*/',
+              lambda m: m.group() if m.group()[0] == '"' else " " * len(m.group()),
+              s, flags=re.S)
+i = mask.index("{")
+more = mask[i + 1:mask.rindex("}")].strip() != ""
+# First member, so the comma (if any) follows our own value: valid with or
+# without existing members, and no need to find the end of the last one.
+member = '\n\t"password-store": "gnome-libsecret"' + ("," if more else "") + "\n"
+open(p, "w").write(s[:i + 1] + member + s[i + 1:])
+PY
+fi
+
 # --- 7. $HOME convenience links ------------------------------------------------
 # ~/Nextcloud -> the sync folder on the data drive. The Nextcloud client syncs into
 # /var/mnt/data/nextcloud (the 1TB expansion card), not $HOME, so this is just a
