@@ -3,7 +3,8 @@
 # to re-run. Baked into the image (this is the one piece that can't live in the
 # dotfiles repo, since it's what clones the dotfiles repo).
 #
-#   1. clone the public dotfiles repo over HTTPS (anonymous — no token needed)
+#   1. clone the public dotfiles repo over HTTPS (anonymous — no token needed);
+#      pushes are pointed at SSH, for once ~/.ssh is restored
 #   2. stow every package into $HOME
 #   3. install $HOME tooling: Homebrew, its Brewfile, SDKMAN, JetBrains Toolbox
 #
@@ -26,6 +27,17 @@ if [[ -d "$DOTFILES_DIR/.git" ]]; then
 else
   say "cloning dotfiles from $DOTFILES_REPO (public — no auth needed)"
   git clone "$DOTFILES_REPO" "$DOTFILES_DIR" || { warn "clone failed — check network and re-run"; exit 1; }
+fi
+
+# Push over SSH, fetch over anonymous HTTPS. GitHub takes no password for HTTPS
+# pushes, and no credential helper is set up this early, so with only the HTTPS URL the
+# first push after a reinstall fails with "could not read Username for
+# 'https://github.com'" (2026-10-11). Setting only the push URL keeps `git pull`,
+# and so a re-run of this script, working before ~/.ssh is restored. Applied
+# to an existing clone too, and only when origin is the GitHub HTTPS form.
+origin_url="$(git -C "$DOTFILES_DIR" remote get-url origin 2>/dev/null)"
+if [[ "$origin_url" =~ ^https://github\.com/(.+)$ ]]; then
+  git -C "$DOTFILES_DIR" remote set-url --push origin "git@github.com:${BASH_REMATCH[1]}"
 fi
 
 # Activate the repo's secret-blocking pre-commit hook. core.hooksPath is local git
