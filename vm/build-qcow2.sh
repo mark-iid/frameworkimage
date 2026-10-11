@@ -27,11 +27,17 @@ podman run --rm --privileged --security-opt label=disable \
   -v "$PWD/vm/biib-config.toml":/config.toml:ro \
   -v /var/lib/containers/storage:/var/lib/containers/storage \
   "$BIIB" \
-  build --type qcow2 --rootfs xfs "$IMAGE"
+  build --type qcow2 --rootfs btrfs "$IMAGE"
   # --rootfs is REQUIRED: the Fedora sway-atomic base is an ostree image and does
   # not declare a DefaultRootFs, so biib errors "missing required info:
-  # DefaultRootFs" without it. xfs is only for this test disk; the real install
-  # (DESIGN §10) uses btrfs subvols on LUKS, set up at install time, not here.
+  # DefaultRootFs" without it.
+  #
+  # It MUST be btrfs, matching the laptop (DESIGN §10: btrfs subvols on LUKS). The
+  # image's kargs.d carries rootflags=compress=zstd:1, a btrfs-only mount option.
+  # This was xfs until 2026-10-11, and from the day that karg landed (2026-09-24)
+  # every VM boot failed to mount /sysroot and dropped to the initramfs emergency
+  # shell. Nobody noticed until a Fedora 45 test. A with/without boot of the same
+  # disk isolated it to that one argument.
 
 echo ">>> Done. Artifact:"
 find vm/output -name '*.qcow2' -exec ls -lh {} \;
