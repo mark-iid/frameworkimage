@@ -50,6 +50,15 @@ fi
 # --- 2. stow -------------------------------------------------------------------
 if command -v stow >/dev/null; then
   say "stowing dotfiles into $HOME"
+  # ~/.local/bin must exist as a REAL directory before stowing. Only the `bin`
+  # package provides it, so otherwise stow "folds" it: ~/.local/bin becomes a
+  # symlink to ~/dotfiles/bin/.local/bin, and everything an installer drops there
+  # lands inside the public dotfiles repo. On 2026-10-11 that was jetbrains-toolbox
+  # and the voice toolbox's pip launchers, 16 untracked files. With the directory
+  # already there, stow links the scripts individually. Done here rather than with
+  # --no-folding, which would also unfold ~/.config/* and change where new
+  # config files land.
+  mkdir -p "$HOME/.local/bin"
   # Stow each package by absolute --dir instead of cd'ing in: an unguarded `cd` that
   # silently failed would stow from the wrong cwd into $HOME. The */ glob skips .git.
   for pkg in "$DOTFILES_DIR"/*/; do
