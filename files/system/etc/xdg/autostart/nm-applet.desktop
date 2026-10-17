@@ -1,0 +1,9 @@
+# Replaces the NetworkManager package's entry so XDG autostart skips it. niri
+# already starts `nm-applet --indicator` (etc/niri/config.kdl and the
+# dotfiles). This entry has no --indicator, so it would add a second applet
+# on the XEmbed tray, which waybar cannot show.
+[Desktop Entry]
+Type=Application
+Name=Network
+Exec=nm-applet
+Hidden=true

@@ -1,0 +1,7 @@
+# Replaces the base image's entry so XDG autostart skips it. These are guest
+# tools for running inside a VM, and this image runs on bare metal.
+[Desktop Entry]
+Type=Application
+Name=VMware User Agent
+Exec=/usr/bin/vmware-user-suid-wrapper
+Hidden=true
