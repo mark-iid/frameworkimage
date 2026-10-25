@@ -1,0 +1,22 @@
+[Unit]
+Description=Scrub the root btrfs filesystem (verify every checksum)
+# One filesystem holds /, /var and /var/home (DESIGN §10 disk topology), and a
+# scrub covers the whole filesystem whichever mount it is given. /var is used
+# because / is the composefs overlay, not btrfs.
+RequiresMountsFor=/var
+
+[Service]
+Type=oneshot
+# -B: stay in the foreground so the exit status is the scrub's own result.
+# btrfs-scrub(8): 0 clean, 1 could not run, 3 uncorrectable errors found.
+# Any of those nonzero codes fails the unit, so a bad scrub shows up in
+# `systemctl --failed` instead of only in `btrfs scrub status`.
+#
+# Data is single-copy (only metadata is DUP), so a data checksum error is
+# DETECTED, not repaired. The journal names the affected file; restore it from
+# backup.
+ExecStart=/usr/sbin/btrfs scrub start -B -d /var
+Nice=19
+IOSchedulingClass=idle
+# Baseline 2026-10-25: 80.5 GiB in 29 s. The cap is generous for growth.
+TimeoutStartSec=2h

@@ -1,0 +1,12 @@
+[Unit]
+Description=Monthly btrfs scrub of the root filesystem
+
+[Timer]
+OnCalendar=monthly
+# A laptop is often off or asleep at 00:00 on the 1st; Persistent=true runs the
+# missed slot at the next boot.
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

@@ -217,7 +217,8 @@ assert "Symbols Nerd Font installed for waybar" \
 # `systemctl is-enabled` reads unit files and symlinks; it needs no running
 # manager, so it works inside the build container.
 for u in greetd.service tailscaled.service \
-         rpm-ostreed-automatic.timer flatpak-update.timer kb3lyb-power-profile.timer; do
+         rpm-ostreed-automatic.timer flatpak-update.timer kb3lyb-power-profile.timer \
+         kb3lyb-btrfs-scrub.timer; do
   assert "system unit enabled: $u" sh -c "systemctl is-enabled '$u' >/dev/null 2>&1"
 done
 for u in brew-upgrade.timer flatpak-update-user.timer kb3lyb-image-age.timer; do
