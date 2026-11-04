@@ -42,3 +42,9 @@ modules:
       packages:
         - ffmpeg
         - mesa-va-drivers-freeworld
+        # vainfo, the only way to actually inspect VA-API on the running host.
+        # Plain Fedora, one package, ~3 MiB, no deps beyond the libva already
+        # pulled in by the drivers. Here rather than in a general tools module
+        # because it exists to verify THIS module: a swap that silently no-ops
+        # leaves a green build and no hardware decode (see image-assert.sh).
+        - libva-utils

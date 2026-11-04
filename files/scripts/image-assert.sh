@@ -83,6 +83,9 @@ assert "ffmpeg (RPM Fusion) installed"           rpm -q --quiet ffmpeg
 refute "ffmpeg-free replaced, not co-installed"  rpm -q --quiet ffmpeg-free
 assert "mesa-va-drivers-freeworld installed"     rpm -q --quiet mesa-va-drivers-freeworld
 refute "mesa-va-drivers replaced"                rpm -q --quiet mesa-va-drivers
+# Only that vainfo EXISTS. Running it needs a DRM device the build container has
+# no access to, so the check has to stay at "the tool is there to run on the host".
+assert "vainfo available for checking VA-API"    sh -c 'command -v vainfo >/dev/null'
 
 # --- unrar resolved to RARLAB's build, not the unrar-free wrapper -------------
 # Fedora ships unrar 0.3.x (a wrapper around unrar-free, no RAR5); RPM Fusion
