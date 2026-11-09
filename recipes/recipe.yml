@@ -548,7 +548,7 @@ modules:
           - com.valvesoftware.Steam
           - io.github.kolunmi.Bazaar   # app store (Flathub)
           # Daily & comms
-          - net.cozic.joplin_desktop   # Notes — bound to Mod+N in the niri config (dotfiles)
+          - md.obsidian.Obsidian   # Notes — bound to Mod+N in the niri config (dotfiles)
           - org.videolan.VLC
           - us.zoom.Zoom
           - com.github.IsmaelMartinez.teams_for_linux   # Teams (unofficial, better Wayland than the web app)
