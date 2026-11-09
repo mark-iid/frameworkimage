@@ -204,6 +204,16 @@ modules:
         # noticeably worse than 5 GHz. Both plain Fedora 44 packages, no new repo.
         - wavemon
         - iperf3
+        # adb/fastboot, for the Quest 2 over USB (WiVRn's wired transport). Layered
+        # and not a flatpak by necessity: the WiVRn flatpak ships no adb and no
+        # --device access, so it reaches the headset by talking to a HOST adb
+        # server on localhost:5037 which does the USB I/O. No udev rules file is
+        # needed — systemd's own 70-uaccess.rules tags ADB/fastboot interfaces
+        # generically by interface class (ff4201 etc.), so the seat user gets
+        # access without a per-vendor rule for Meta's 2833: VID. Headset side
+        # still needs Developer Mode on (Horizon phone app) plus a one-time
+        # "always allow USB debugging" prompt in the headset.
+        - android-tools
         # kismet — monitor-mode survey, for neighbor APs and channel congestion
         # across all bands. Not a flatpak and can't sensibly be one: it captures
         # on the raw interface through setuid-root helper binaries, which is the
