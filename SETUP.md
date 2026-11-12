@@ -537,6 +537,42 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       the group cover two different things — read both before concluding either is
       redundant.
 
+- [ ] **Restore the state a reinstall cannot recreate: `kb3lyb-restore`.**
+      The other half of `kb3lyb-wipe-prep`. Run it AFTER `kb3lyb-bootstrap` —
+      it needs the dotfiles checkout, because the list of paths it must not
+      overwrite is generated from `git ls-files` there.
+      ```
+      kb3lyb-restore --list                 # what is available, from where
+      kb3lyb-restore --only secrets         # do this FIRST (see below)
+      kb3lyb-restore --dry-run              # then check the rest
+      kb3lyb-restore
+      ```
+      Two sources, and the order between them is forced: `secrets` and `net`
+      come off the expansion card, which needs no network and no passphrase —
+      the state a fresh install is in. Everything else comes from the restic
+      repo on nas1, which cannot be read until the passphrase is restored, and
+      the passphrase is in the `secrets` group. So `--only secrets` first,
+      always.
+
+      `net` (NetworkManager wifi + WireGuard profiles) exists **only** on the
+      card. Those files live in `/etc`, so restic has never seen them and never
+      will; they are the sudo-gated part of the capture, so a capture taken
+      without working sudo has everything except them. `--list` says so
+      explicitly rather than claiming they are available.
+
+      It will not overwrite a repo-owned file. A blanket `restic restore` of
+      `$HOME` would replace every stow symlink with a stale regular file and
+      revert the dotfiles to snapshot state; the exclusion is file-level, not
+      directory-level, because the repo owns `~/.config/restic/excludes` but
+      not `~/.config/restic/password`.
+
+      **The keyring only survives if the login password is unchanged.**
+      `login.keyring` is encrypted from it. With a new password the restored
+      file is unreadable and gnome-keyring prompts forever — delete
+      `~/.local/share/keyrings/login.keyring`, log out and back in for a fresh
+      one, then re-authenticate Evolution (3 `microsoft365` sources), Slack,
+      Bitwarden and the git credential helper.
+
 - [ ] **Re-establish the Claude Code work/personal split.** `~/.local/bin/claude`
       and `~/.local/bin/claude-account` arrive with the dotfiles (`bin` package),
       but the map and the credentials do not:
