@@ -621,8 +621,9 @@ internal drive be wiped.
 
 Not dotfiles. These are the things that are easy to forget and painful to lose:
 
-- **Atuin encryption key** (`~/.local/share/atuin/key`). Unrecoverable if lost;
-  the synced history becomes undecryptable. Back this up first.
+- ~~Atuin encryption key~~ — dropped 2026-11-11. It protects atuin's
+  server-side sync, which was never configured here, and shell history is now
+  deliberately excluded from the backup rather than restored. See SETUP §7.
 - `~/.ssh` and `~/.gnupg`.
 - `~/.config/rclone/rclone.conf` (contains OAuth tokens).
 - **Anything under a path the dotfiles `.gitignore` excludes.** The repo is

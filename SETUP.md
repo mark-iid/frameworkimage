@@ -600,7 +600,12 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
 ## 7. Backup checklist (§10) — do BEFORE wiping the internal drive
 
 Not dotfiles. The easy-to-forget, painful-to-lose things:
-- [ ] **Atuin key** `~/.local/share/atuin/key` (unrecoverable if lost). Back up first.
+- [ ] ~~Atuin key~~ — **no longer applicable.** Shell history is deliberately not
+      carried across a wipe (2026-11-11): `~/.atuin` and `~/.zsh_history` are
+      excluded from the restic backup and `kb3lyb-restore` has no `shell` group.
+      The key only ever mattered for atuin's server-side sync, which is not
+      configured here (`atuin status` reports "not logged in"), so the old
+      "unrecoverable if lost" framing overstated it for this machine.
 - [ ] `~/.ssh`, `~/.gnupg`, `~/.config/rclone/rclone.conf` (OAuth tokens).
 - [ ] **The files that exist ONLY here.** Each of these lives under a path the
       dotfiles repo deliberately gitignores (it is public), so `git clone` does
