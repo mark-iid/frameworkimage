@@ -374,7 +374,7 @@ fi
 if systemctl --user show-environment >/dev/null 2>&1; then
   say "enabling user timers"
   systemctl --user daemon-reload || warn "daemon-reload failed; unit files may be stale"
-  for unit in kb3lyb-backup.timer kb3lyb-backup-age.timer davmail.service nntps-es.service; do
+  for unit in kb3lyb-backup.timer kb3lyb-backup-age.timer kb3lyb-doctor.timer davmail.service nntps-es.service; do
     if systemctl --user enable --now "$unit" >/dev/null 2>&1; then
       echo "    enabled $unit"
     else
