@@ -246,6 +246,20 @@ assert "sddm disabled in favour of greetd" \
 assert "systemd-remount-fs masked (composefs root cannot be remounted)" \
   sh -c '[ "$(systemctl is-enabled systemd-remount-fs.service 2>/dev/null)" = masked ]'
 
+# --- Installer ISO can still be depsolved ------------------------------------
+# bootc-image-builder's anaconda-iso type reads repo configuration ONLY from
+# /etc/yum.repos.d, which Fedora 45 ships empty (the files moved to
+# /usr/share/dnf5/repos.d). Without the links iso-build-repos.sh puts back, the
+# ISO build dies in manifest generation with ~22 "No match for argument" lines —
+# and that is discovered at the worst possible moment, when a rebuild is needed
+# to get an installer. Nothing on the running laptop touches these, so no other
+# check would ever notice them missing. Assert the repo IDs rather than the
+# filenames: a link resolving to the wrong file would satisfy a filename test.
+for id in fedora updates; do
+  assert "repo id [$id] reachable at /etc/yum.repos.d (installer ISO depsolve)" \
+    sh -c "grep -rhq '^\\[$id\\]' /etc/yum.repos.d/*.repo"
+done
+
 # --- Superseded signing key -------------------------------------------------
 # The key was rotated 2026-08-27, so every GHCR tag built before then is signed
 # with a key no host trusts any more. SETUP §8's rollback procedure repoints

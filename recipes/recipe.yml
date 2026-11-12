@@ -687,6 +687,17 @@ modules:
       # pam_fprintd.so is absent rather than shipping a silent no-op.
       # Per-user enrollment stays a runtime step: fprintd-enroll.
       - sudo-fingerprint.sh
+      # Symlink Fedora's fedora/fedora-updates .repo files back into
+      # /etc/yum.repos.d. Nothing in the image needs them there — this exists
+      # purely so `bootc-image-builder --type anaconda-iso` can depsolve its own
+      # installer packages, which it reads from that path only. Fedora 45 moved
+      # the files to /usr/share/dnf5/repos.d and the ISO build broke with ~22
+      # "No match for argument" lines that look like an image problem but are
+      # not. Read the script header; it fails the build if its premise stops
+      # holding, rather than silently leaving the ISO unbuildable.
+      # Must come after every dnf module, which add and then withdraw their own
+      # repo files in this directory.
+      - iso-build-repos.sh
 
   # Display manager: base SDDM -> greetd. Plus tailscaled (§2) and the auto-update
   # timers (§5). Unit files for the flatpak/brew timers live in files/systemd/.
