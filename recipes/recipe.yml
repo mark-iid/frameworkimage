@@ -552,12 +552,29 @@ modules:
           - org.videolan.VLC
           - us.zoom.Zoom
           - com.github.IsmaelMartinez.teams_for_linux   # Teams (unofficial, better Wayland than the web app)
+          - app.fluxer.Fluxer                   # Fluxer chat
+          - io.mpv.Mpv                          # kept alongside VLC, not instead of it: mpv is the
+                                                # scriptable/keyboard-driven player, VLC the one that
+                                                # opens anything a stranger sends you
           # System utilities
           - com.github.tchx84.Flatseal          # flatpak permission editor
           - com.github.wwmm.easyeffects         # audio EQ / effects
           - io.missioncenter.MissionCenter      # graphical system monitor
           - org.gnome.Firmware                  # fwupd GUI (firmware updates)
           - org.remmina.Remmina                 # RDP/VNC remote desktop
+          - org.gnome.FileRoller                # archive manager. NOT a duplicate of the base's
+                                                # xarchiver: that one is what thunar-archive-plugin
+                                                # drives (and what the `unrar` entry above feeds);
+                                                # this is the GTK4 one used by hand.
+          - org.gnome.Papers                    # PDF/document viewer
+          - org.gnome.TextEditor                # plain GUI text editor
+          - org.gnome.gThumb                    # image viewer/organiser — also the one named in
+                                                # files/system/etc/xdg/tumbler/tumbler.rc
+          - org.kde.gwenview                    # second image viewer (Qt); fast folder browsing
+          - org.fedoraproject.MediaWriter       # writes Fedora ISOs. rpi-imager (layered above) is
+                                                # the Raspberry Pi one; this is the Fedora one, and
+                                                # it is the safer of the two around /var/mnt/data.
+          - se.sjoerd.lockpicker                # password-hash recovery
           # Creative & CAD
           - org.blender.Blender
           - org.gimp.GIMP
@@ -567,6 +584,17 @@ modules:
           - org.godotengine.Godot
           - cc.arduino.IDE2                     # Arduino IDE
           - fr.handbrake.ghb                    # HandBrake video transcoder
+          - com.bambulab.BambuStudio            # Bambu's own slicer, for the P1S. OrcaSlicer above
+                                                # is the fork and the daily driver; this one stays
+                                                # for firmware/printer features Orca does not carry.
+          - org.openscad.OpenSCAD               # script-driven CAD (the .scad half of the 3D work)
+          - org.librecad.librecad               # 2D drafting (DXF); FreeCAD above is the 3D one
+          - com.github.libresprite.LibreSprite  # pixel-art / sprite animation
+          - rs.ruffle.Ruffle                    # Flash player, for archived .swf content
+          - com.dosbox_x.DOSBox-X               # DOS emulator. LOAD-BEARING: bin/dosdev and
+                                                # bin/dosvm in the dotfiles drive it, and
+                                                # dotfiles/dosbox-x/.config/dosbox-x/{markdos,games}.conf
+                                                # are its configs. The QB4.5/A86 work in ~/dos runs here.
           # Dev & docs
           - org.eclipse.Java                    # Eclipse IDE
           - org.texstudio.TeXstudio             # LaTeX editor
@@ -574,6 +602,32 @@ modules:
           - com.abisource.AbiWord
           - org.gnome.Boxes                     # GNOME Boxes (local VMs)
           - com.hamrick.VueScan                 # scanner software
+          - dev.zed.Zed                         # Zed editor (alongside VS Code, layered above)
+          - org.vim.Vim                         # GUI vim. The TUI editor is brew neovim (Brewfile),
+                                                # whose LazyVim config is in the dotfiles; this is
+                                                # the separate windowed one.
+          - org.lyx.LyX                         # WYSIWYM LaTeX front end; TeXstudio above is the
+                                                # source-level editor for the same documents
+          # Hardware, radio and mail gateway. Each of these has something in the
+          # image or the dotfiles that already assumes it is installed, which is
+          # why they are called out rather than left to be installed by hand —
+          # that is exactly how they went missing from this list until 2026-11-11.
+          - io.sourceforge.wsjt.wsjtx           # WSJT-X (FT8). The niri config binds a layout for it
+                                                # (dotfiles niri/scripts/wsjtx-layout), and
+                                                # rigctld.service drives the radio.
+          - one.flipperzero.qFlipper            # Flipper Zero companion. The image already bakes
+                                                # files/system/etc/udev/rules.d/70-flipper-zero.rules
+                                                # for it, and the dotfiles ship flipper-mount.path +
+                                                # flipper-health.timer.
+          - io.github.wivrn.wivrn               # WiVRn OpenXR streaming to the Quest 2. `android-tools`
+                                                # is layered above SPECIFICALLY for this — see that
+                                                # entry's note about the flatpak reaching the headset
+                                                # through a host adb server on localhost:5037.
+          - org.davmail.DavMail                 # Exchange/M365 gateway. The most load-bearing omission
+                                                # of the lot: davmail.service and davmail-codewatch.service
+                                                # are committed user units, isyncrc/mbsync reads the
+                                                # Maildir it feeds, aerc reads that Maildir, and the
+                                                # Brewfile's `isync` line exists only for this chain.
       - scope: user
         install:
           - org.gnome.seahorse.Application      # keyring/GNOME Keyring GUI (Seahorse)
