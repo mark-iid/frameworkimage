@@ -115,6 +115,68 @@ if [[ ! -s "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
   curl -fsSL "https://get.sdkman.io?rcupdate=false" | bash || warn "SDKMAN install failed"
 fi
 
+# ...and a JDK, which until 2026-11-11 this script did NOT do. SDKMAN was
+# installed and left empty, so the machine had no `javac` at all — found when
+# nvim's Mason could not build java-debug-adapter. "Install the version manager"
+# is not the same as "install the thing", and an empty ~/.sdkman looks fine.
+#
+# Three majors because the poms in ~/src disagree: 1.8, 17 and 25 all appear.
+#   17  default — SailPoint IIQ 8.x is supported on 8/11/17, and IIQ is the
+#       stated reason SDKMAN is here at all
+#   21  current LTS, for everything that is not IIQ
+#   8   the legacy 1.8 projects
+#
+# Versions are RESOLVED, not pinned: SDKMAN drops old patch builds from its
+# index, so a hardcoded 17.0.21.0+9-tem would start failing the moment Temurin
+# ships the next patch. Takes the newest non-installed build of each major.
+# Entirely non-fatal — a failure here must not stop the rest of bootstrap.
+if [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
+  # set +u around the source is REQUIRED, not defensive. This script runs under
+  # `set -u` and sdkman-init.sh tests $ZSH_VERSION unguarded, so sourcing it
+  # aborts with "ZSH_VERSION: unbound variable" and every sdk call afterwards is
+  # a no-op. It fails silently in the sense that matters: the script continues,
+  # SDKMAN looks installed, and ~/.sdkman/candidates/java stays empty.
+  set +u
+  # shellcheck disable=SC1091
+  source "$HOME/.sdkman/bin/sdkman-init.sh"
+  # `sdk` is a shell FUNCTION and reads this from the shell, so it has to be set
+  # here. As a command prefix (`sdkman_auto_answer=false sdk install ...`) it
+  # would land in the environment of whatever is being prefixed and the function
+  # would never see it — which, with auto_answer left at its default, lets the
+  # second and third installs each silently take over as the default JDK.
+  export sdkman_auto_answer=false
+  for major in 17 21 8; do
+    # Anchored on "<major>." — a bare *${major}*-tem glob would let 8 match an
+    # 18.x or x.x.8 build and skip the install that was actually wanted.
+    if compgen -G "$HOME/.sdkman/candidates/java/${major}.*-tem" >/dev/null; then
+      continue   # some build of this major is already here
+    fi
+    # The identifier is the LAST pipe-separated field of `sdk list java`. Keyed
+    # off $NF rather than a column number on purpose: the table is 4 columns
+    # wide here and 6 in other sdkman versions, so a fixed index resolves to
+    # nothing and the whole loop silently installs no JDK at all. `sdk list` is
+    # newest-first, so the first match is the newest build of that major, and
+    # index(id, m ".") == 1 anchors it so major 8 cannot match 18.x.
+    ident="$(sdk list java 2>/dev/null | awk -F'|' -v m="$major" '
+        { id = $NF; gsub(/^[ \t]+|[ \t]+$/, "", id)
+          if (id ~ /-tem$/ && index(id, m ".") == 1) { print id; exit } }')"
+    if [[ -z "$ident" ]]; then
+      warn "no Temurin $major found in the SDKMAN index; skipping"
+      continue
+    fi
+    say "installing JDK $ident"
+    yes n | sdk install java "$ident" >/dev/null 2>&1 \
+      || warn "could not install java $ident"
+  done
+  # Set the default LAST and explicitly, so it does not depend on install order.
+  default_java="$(compgen -G "$HOME/.sdkman/candidates/java/17.*-tem" | head -1)"
+  if [[ -n "$default_java" ]]; then
+    sdk default java "$(basename "$default_java")" >/dev/null 2>&1 \
+      || warn "could not set the default JDK"
+  fi
+  set -u
+fi
+
 # JetBrains Toolbox (self-updating, in $HOME — DESIGN §2). Since 3.x it ships as a
 # BUNDLE (bin/jetbrains-toolbox + bin/lib/), not a single binary, and the binary
 # sits at bin/ inside a versioned top dir. So extract the whole tree to a stable
@@ -290,15 +352,29 @@ fi
 # (a `disable` shows up as a repo deletion), and the links it writes hardcode an
 # absolute $HOME path that only resolves for one username.
 #
-# Only units that are enabled deliberately belong here. rclone-onedrive-iid is
-# left disabled on purpose, and swayidle/graphical-session-bind are static —
-# no [Install] section, pulled in by the units that need them.
+# Only units that are enabled deliberately belong here. rclone-onedrive-iid,
+# rclone-nextcloud, flipper-health.timer and flipper-mount.path are left
+# disabled on purpose, and swayidle/graphical-session-bind/nextcloud-client/
+# desktop-appearance/private-history are static — no [Install] section, pulled
+# in by the units that need them.
+#
+# davmail and nntps-es were MISSING from this list until 2026-11-11, and the
+# gitignore line above is exactly why that went unnoticed: both were enabled on
+# the live machine, so `systemctl --user list-unit-files` looked right, but the
+# enablement lived only in the untracked default.target.wants/ and would not
+# survive a wipe. The mail chain would then come back half-wired — units stowed,
+# nothing starting them, mbsync reading a Maildir that nobody was filling.
+#
+# Note what does NOT need a line here: davmail-codewatch.service and
+# rigctld.service are pulled in by .wants/ directories that ARE tracked
+# (davmail.service.wants/ and a dev-serial-…device.wants/), because the
+# gitignore only excludes *.target.wants/.
 #
 # Idempotent: enabling an already-enabled unit is a no-op.
 if systemctl --user show-environment >/dev/null 2>&1; then
   say "enabling user timers"
   systemctl --user daemon-reload || warn "daemon-reload failed; unit files may be stale"
-  for unit in kb3lyb-backup.timer; do
+  for unit in kb3lyb-backup.timer davmail.service nntps-es.service; do
     if systemctl --user enable --now "$unit" >/dev/null 2>&1; then
       echo "    enabled $unit"
     else
