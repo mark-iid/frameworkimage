@@ -537,6 +537,28 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
       the group cover two different things — read both before concluding either is
       redundant.
 
+- [ ] **Re-establish the Claude Code work/personal split.** `~/.local/bin/claude`
+      and `~/.local/bin/claude-account` arrive with the dotfiles (`bin` package),
+      but the map and the credentials do not:
+      1. Restore `~/.claude-accounts` from the backup (§7). Without it the
+         wrapper falls through and everything runs on the default account.
+      2. `claude-account --init work` — creates `~/.claude-work` and symlinks the
+         shared config (CLAUDE.md, settings.json, skills, plugins, projects) into
+         it. Re-run it any time `--check` reports a link replaced by a real file.
+      3. `CLAUDE_ACCOUNT=work claude`, then `/login` with the work account.
+      4. `claude-account --sessions` to confirm. `USING` is authoritative; the
+         emails it prints are a cache and are marked STALE past 12h.
+
+      **Do step 3 in a shell opened AFTER the dotfiles are stowed.** The wrapper
+      only works if `~/.local/bin` precedes the brew prefix on PATH, and a shell
+      that ran `claude` before the wrapper existed has the old path hashed
+      (`rehash`, or open a new shell). Getting this wrong is silent and writes
+      the login into the *wrong* config dir: on 2026-11-11 a `CLAUDE_ACCOUNT=work
+      claude; /login` ran the brew cask directly — which ignores that variable —
+      and put work credentials in the personal dir. The `.zshrc` PATH block was
+      fixed the same day to promote `~/.local/bin` rather than skip it when
+      already present, but the hashed-path case still bites.
+
 ---
 
 ## 7. Backup checklist (§10) — do BEFORE wiping the internal drive
@@ -544,6 +566,25 @@ bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
 Not dotfiles. The easy-to-forget, painful-to-lose things:
 - [ ] **Atuin key** `~/.local/share/atuin/key` (unrecoverable if lost). Back up first.
 - [ ] `~/.ssh`, `~/.gnupg`, `~/.config/rclone/rclone.conf` (OAuth tokens).
+- [ ] **The files that exist ONLY here.** Each of these lives under a path the
+      dotfiles repo deliberately gitignores (it is public), so `git clone` does
+      not bring them back and nothing else holds a copy:
+      - `~/.claude/CLAUDE.md` — global Claude Code instructions
+      - `~/.claude/mark-voice-guide.md` — writing-voice profile. **Never goes in
+        any repo** (see the last-word rule in the dotfiles `.gitignore` and the
+        pre-commit hook that blocks it by name).
+      - `~/.claude-accounts` — the work/personal account map read by
+        `~/.local/bin/claude-account`. Not stowed on purpose: it names paths.
+      - `~/.config/restic/password` — the restic repo passphrase. Without it the
+        TrueNAS backup is an opaque blob; this is the one that turns a backup
+        into a non-backup.
+      - `~/.vscode/argv.json` if it has anything beyond the keyring line.
+- [ ] **`ai.storyteller.pdfcraft` is not reinstallable from the recipe.** It came
+      from a local bundle (`pdfcraft-0.6.0-linux-x86_64.flatpak`, remote
+      `pdfcraft-origin`, no-gpg-verify) and it is NOT on Flathub. The bundle is no
+      longer on disk. Re-download it before wiping and keep the .flatpak on the
+      data drive, or accept losing the app. Every other installed flatpak is in
+      `recipes/recipe.yml` as of 2026-11-11.
 - [ ] WireGuard configs + NetworkManager connection profiles.
 - [ ] Browser profiles (or confirm synced), Evolution/Thunderbird profile.
 - [ ] VS Code settings + `code --list-extensions`; JetBrains config + licenses.
@@ -556,6 +597,9 @@ Protect the backup itself:
 - [ ] **Back up the expansion card's LUKS header** (`cryptsetup luksHeaderBackup`),
       store it somewhere *other* than the card.
 - [ ] Don't keep the only copy of the card passphrase on the machine being wiped.
+- [ ] **Capture `/etc/crypttab` and the `/var/mnt/data` fstab line verbatim**
+      (DESIGN §10 — recreate them, don't reconstruct from memory):
+      `sudo cat /etc/crypttab; grep data /etc/fstab; sudo cryptsetup status data`
 - [ ] Put a second encrypted copy of the tiny irreplaceables (atuin/ssh/gpg/rclone)
       on the homelab TrueNAS or OneDrive.
 - [ ] **Restore the backup into a VM and confirm it works** — a backup that hasn't

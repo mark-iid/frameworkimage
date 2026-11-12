@@ -625,6 +625,11 @@ Not dotfiles. These are the things that are easy to forget and painful to lose:
   the synced history becomes undecryptable. Back this up first.
 - `~/.ssh` and `~/.gnupg`.
 - `~/.config/rclone/rclone.conf` (contains OAuth tokens).
+- **Anything under a path the dotfiles `.gitignore` excludes.** The repo is
+  public, so several load-bearing files are deliberately untracked and exist in
+  exactly one place: `~/.claude/CLAUDE.md`, `~/.claude/mark-voice-guide.md`,
+  `~/.claude-accounts`, `~/.config/restic/password`. A `git clone` looks like a
+  full restore and is not. SETUP §7 carries the current list.
 - WireGuard configs and any NetworkManager connection profiles worth keeping.
 - Browser profiles, or confirm everything is in sync and skip.
 - Evolution/Thunderbird profile, or plan to re-authenticate.
