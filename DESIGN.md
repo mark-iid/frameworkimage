@@ -513,8 +513,9 @@ because the sequencing — codecs first, VM before hardware, hardware before wip
    user in the VM.
 7. Wire up the scheduled version-bump PR workflow.
 8. Generate an installer ISO from the image.
-9. Install to an external USB SSD and daily-drive it for a week on real hardware.
-10. Only then: back up, verify the backup, and wipe the internal drive.
+9. ~~Install to an external USB SSD and daily-drive it for a week on real
+   hardware.~~ Declined 2026-11-11 — see §10.
+10. Back up, verify the backup by restoring it, then wipe the internal drive.
 
 ---
 
@@ -532,10 +533,11 @@ physically removable, USB-attached device. Two consequences:
 Anaconda's disk selection screen. A device that is not plugged in cannot be
 selected by mistake. Reinsert after the install completes.
 
-**It cannot serve as both the backup target and the USB test-install target.** A
-second external drive is needed for the week-long hardware test in the section
-below, or the backup has to live somewhere else. Expansion cards are USB 3.2
-Gen 2 and workable, but a 2280 NVMe in a USB-C enclosure is the better test rig.
+**It no longer has to serve two roles.** This used to be a conflict: the card
+could not be both the backup target and the target of the week-long trial
+install, so a second external drive was needed. With that trial declined (see
+below) the card is only the backup target, and the one conflict this paragraph
+existed to flag is gone.
 
 ### Protecting the backup itself
 
@@ -595,27 +597,39 @@ fingerprint reader, the 200 DPI panel at 1.35 scale, the amdgpu PSR hang the
 audio, and suspend/resume. A live ISO tests those only briefly and cannot test
 persistence, fprintd enrollment, or the update path at all.
 
-**Better: do a full install onto an external USB SSD and daily-drive it for a
-week.** Same installer ISO, different target disk. Nothing on the internal NVMe is
-touched.
+**The week-long trial install on an external USB SSD is DECLINED (2026-11-11),
+deliberately, not forgotten.** This section used to require a full install onto
+an external NVMe and a week of daily driving before the internal drive could be
+wiped. Recorded here rather than deleted so the trade-off being accepted is
+explicit, and so it is not silently reintroduced as a blocker:
 
-- Use an external NVMe in a USB-C 10Gbps enclosure. **Not a USB flash drive** —
-  a flash drive will make the whole system feel terrible and produce a false
-  negative on the design.
-- Framework's own expansion-card SSDs work but are slower; the 2280 enclosure is
-  the better test rig.
-- Boot menu on the Framework 13 is F12, or set boot order in BIOS.
+- What is given up is a rehearsal of the install flow and, more importantly, a
+  week of real use to shake out the hardware list above. Anything on that list
+  that is broken will now be discovered on the only install there is.
+- What makes that tolerable is the recovery path, not optimism: the $HOME
+  backup is verified (`restic check`, plus a restore compared by checksum), the
+  pre-wipe capture exists in two places, and `kb3lyb-restore` has been dry-run
+  per group against the repo. A bad outcome costs a reinstall, not data.
+- The honest residual risk is that the RESTORE side has never been exercised
+  against a real fresh install — only against this machine. That is now the
+  least-tested part of the whole plan.
+
+So treat the hardware list above as a FIRST-BOOT checklist instead of a
+week-long trial: check the fingerprint reader, the panel at 1.35, HDMI, wifi,
+bluetooth audio and suspend/resume before trusting the machine, and keep the
+previous deployment pinned (`ostree admin pin`) until they all pass.
+
+Still true regardless of how the install happens:
+
 - **Anaconda target selection is the dangerous step.** Confirm the target device
-  by serial/size before proceeding, especially if `/var/mnt/data` turns out to
-  live on the internal NVMe.
-- This also exercises the real install flow: partitioning, LUKS setup, first
-  boot, greeter. Those are worth rehearsing once before doing them for keeps.
+  by serial/size before proceeding. On this machine `/var/mnt/data` is the
+  USB-attached 1TB card (`sda`, "1TB Card", serial 071C58B5628B1E49) and the
+  internal drive is `nvme0n1` ("WD_BLACK SN7100 500GB", serial 25433Y802666) —
+  pull the card first and the question cannot arise.
+- Boot menu on the Framework 13 is F12, or set boot order in BIOS.
 - Secure Boot can stay enabled. Fedora's shim and kernel are signed and no
   out-of-tree kernel modules are planned (no NVIDIA, no akmods). If akmods ever
   get added, that changes and a MOK enrollment becomes necessary.
-
-Only after a week on the USB install with no unresolved problems should the
-internal drive be wiped.
 
 ### Backup checklist
 

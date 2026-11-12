@@ -219,9 +219,12 @@ During Anaconda:
       separate ext4 `/boot`, vfat ESP — reproduce the current layout (§1).
 - [ ] Secure Boot can stay enabled (Fedora shim/kernel are signed; no akmods planned).
 
-Trial: **daily-drive the USB install for a week** (§9.9) — it's the only way to test
-the fingerprint reader, the 200-DPI panel at 1.35, the amdgpu PSR karg, HDMI, wifi,
-bluetooth audio, and suspend/resume. Only then wipe the internal drive (§9.10).
+**No trial install** (declined 2026-11-11, DESIGN §10). The hardware that only
+real use can test — fingerprint reader, the 200-DPI panel at 1.35, the amdgpu
+PSR karg, HDMI, wifi, bluetooth audio, suspend/resume — is now a FIRST-BOOT
+checklist on the real install rather than a week on a spare disk. Keep the
+previous deployment pinned (`sudo ostree admin pin 0`) until every item passes,
+so a failure is a rollback and not a reinstall.
 
 ---
 
