@@ -600,6 +600,164 @@ so a failure is a rollback and not a reinstall.
 
 ---
 
+## 6b. Restoring after a clean install
+
+Written 2026-11-11, the night of the wipe. Order matters more than anything
+else here, and two steps are load-bearing in a way that is not obvious:
+
+* **The capture lives ON the data card, and the card needs a key to open.**
+  So the card has to be unlocked by hand before anything can be read off it.
+  Chicken-and-egg, resolved by the passphrase in Bitwarden (keyslot 2, added
+  2026-11-11) — not by the keyfile, which was on the drive you just erased.
+* **`kb3lyb-restore --only secrets` has to run before any other group**,
+  because the restic passphrase is itself inside that group and every other
+  group reads from the repo.
+
+### 1. Before booting the installer
+
+- [ ] **Pull the 1TB expansion card.** A device that is not plugged in cannot
+      be picked by mistake at Anaconda's disk-selection screen, which is the
+      single most dangerous step of the whole process (DESIGN §10).
+- [ ] Have Bitwarden reachable on another device. You need two entries:
+      `restic-framework` (the repo passphrase) and the card's keyslot-2
+      passphrase. Without the first, nothing restores; without the second, the
+      card does not open.
+- [ ] Confirm the target: internal is `nvme0n1`, "WD_BLACK SN7100 500GB",
+      serial `25433Y802666`. The card is `sda`, "1TB Card", serial
+      `071C58B5628B1E49`.
+
+### 2. Install
+
+Either ISO works and both need exactly one rebase afterwards (see §6, first
+item — an ISO-built host tracks `localhost/...` and every automatic update
+fails *silently* until it is rebased).
+
+- [ ] Custom partitioning: btrfs subvols on LUKS (`/root`, `/home`, `/var`),
+      separate ext4 `/boot`, vfat ESP.
+- [ ] Create user `mark`. **Use the same password as before** if you want the
+      restored login keyring to open — `login.keyring` is encrypted from it.
+      A different password means re-authenticating Evolution, Slack, Bitwarden
+      and the git credential helper by hand.
+- [ ] Secure Boot can stay enabled.
+
+### 3. Get onto the signed image
+
+From a stock Fedora Sway Atomic install, unverified first — a stock host has no
+signing policy for this image yet, and the policy arrives *with* the image:
+
+```
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/mark-iid/kb3lyb-sway:latest
+systemctl reboot
+# then, once the image has supplied its own /etc/containers/policy.json:
+sudo rpm-ostree rebase ostree-image-signed:docker://ghcr.io/mark-iid/kb3lyb-sway:latest
+systemctl reboot
+```
+
+From the custom ISO, follow §6's first item instead (`ostree admin pin 0`, then
+rebase straight to the signed ref).
+
+- [ ] `rpm-ostree status` — the origin must NOT say `localhost`.
+
+### 4. Reattach the data card
+
+Reinsert it, then unlock by hand with the keyslot-2 passphrase:
+
+```
+sudo cryptsetup luksOpen /dev/sda1 data        # prompts; use the Bitwarden passphrase
+sudo mkdir -p /var/mnt/data
+sudo mount /dev/mapper/data /var/mnt/data
+ls /var/mnt/data/wipe-prep/                    # the capture should be here
+```
+
+Then make it permanent, copying the two lines verbatim out of the capture
+rather than retyping them (`disk/crypttab.txt`, `disk/fstab-etc.txt`):
+
+- [ ] `/etc/crypttab` — the `data` line. It references
+      `/etc/luks/data.key`, which no longer exists, so either restore that
+      keyfile from the capture (`sudo install -m 600 -D <capture>/.../data.key
+      /etc/luks/data.key`) **or** generate a fresh one and add it:
+      ```
+      sudo install -d -m 700 /etc/luks
+      sudo dd if=/dev/urandom of=/etc/luks/data.key bs=4096 count=1
+      sudo chmod 600 /etc/luks/data.key
+      sudo cryptsetup luksAddKey /dev/sda1 /etc/luks/data.key   # authorise with the passphrase
+      ```
+      A fresh key is cleaner: no secret has to have survived the wipe.
+- [ ] `/etc/fstab` — the `/dev/mapper/data` line, keeping
+      `nofail,x-systemd.device-timeout=10s`.
+- [ ] `sudo systemctl daemon-reload && sudo mount -a`, then reboot once and
+      confirm it mounts unattended.
+
+### 5. Dotfiles and $HOME tooling
+
+```
+kb3lyb-bootstrap
+```
+
+Clones the dotfiles from GitHub (public, anonymous), stows every package,
+installs Homebrew + the Brewfile, SDKMAN + three JDKs, JetBrains Toolbox, the
+voice toolbox, sets zsh as the login shell, points VS Code and Obsidian at the
+keyring, and enables the user timers. Re-runnable.
+
+- [ ] Open a new shell afterwards so PATH picks up `~/.local/bin` ahead of brew
+      — the Claude account wrapper depends on that ordering.
+
+### 6. Restore, in this order
+
+```
+kb3lyb-restore --list              # confirm the capture and the repo are both visible
+kb3lyb-restore --only secrets      # FIRST — contains the restic passphrase
+kb3lyb-restore --only net          # wifi + WireGuard profiles (needs sudo)
+kb3lyb-restore --dry-run           # read the plan for the rest
+kb3lyb-restore                     # keyring, mail, apps, notes, desktop, projects, news
+```
+
+- [ ] **Do the `projects` group before re-cloning anything under `~/src`.**
+      restic restore overwrites, so restoring after a fresh clone replaces that
+      clone's working tree with the snapshot's.
+- [ ] ~20G moves in the full run (`apps` is 11G, `projects` 8.8G). Use `--only`
+      on a slow link.
+
+### 7. The parts nothing can restore
+
+```
+sudo usermod -aG kismet,dialout,wireshark "$USER"   # then log out and back in
+fprintd-enroll                                      # per-install, not portable
+sudo tailscale up                                   # new node identity
+rbw login                                           # one-time; agent handles unlocks after
+claude-account --init work
+CLAUDE_ACCOUNT=work claude     # then /login with the work account
+cd ~ && claude                 # then /login with the personal account
+```
+
+- [ ] **TPM-backed LUKS unlock for the internal drive** is new keys on a new
+      install, so re-enroll: `sudo systemd-cryptenroll --tpm2-device=auto
+      --tpm2-pcrs=7 /dev/nvme0n1p3`. Per the standing note, a fwupd Secure Boot
+      update invalidates a PCR 7 token and re-enrolment must happen one boot
+      *later*, never in the same boot.
+- [ ] `ai.storyteller.pdfcraft` is **not** in the recipe and cannot be — it came
+      from a local bundle and is not on Flathub (§7). Reinstall by hand or let
+      it go.
+
+### 8. Verify before trusting it
+
+```
+kb3lyb-doctor          # 11 declared-vs-actual checks; want "no drift found"
+kb3lyb-backup-age      # want a recent successful backup
+kb3lyb-restore --list  # every group should read available
+```
+
+- [ ] Run `kb3lyb-backup` once by hand and let it finish, so the machine has
+      its own backup rather than relying on the pre-wipe one.
+- [ ] First-boot hardware checklist (DESIGN §10, since the week-long trial
+      install was declined): fingerprint reader, the 200-DPI panel at 1.35,
+      amdgpu PSR under load, HDMI output, wifi, bluetooth audio,
+      suspend/resume. **Keep the previous deployment pinned**
+      (`sudo ostree admin pin 0`) until they all pass, so a failure is a
+      rollback and not another reinstall.
+
+---
+
 ## 7. Backup checklist (§10) — do BEFORE wiping the internal drive
 
 Not dotfiles. The easy-to-forget, painful-to-lose things:
