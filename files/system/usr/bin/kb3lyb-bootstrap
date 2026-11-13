@@ -133,6 +133,34 @@ fi
 if [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
   if [[ -f "$DOTFILES_DIR/Brewfile" ]]; then
+    # Homebrew 7 will not load a formula from a non-official tap until it has
+    # been trusted, and the trust lives in ~/.homebrew/trust.json — per-machine
+    # state that a wipe destroys. So `brew bundle` refuses that formula on every
+    # fresh install, inside its own non-fatal warning, and the result surfaces
+    # much later as kb3lyb-doctor reporting "in the Brewfile but not installed"
+    # (2026-11-13, charmbracelet/tap/crush, the only tapped formula here).
+    #
+    # The list is derived from the Brewfile rather than hardcoded, the way
+    # kb3lyb-restore builds its exclude list from `git ls-files`: adding another
+    # tapped formula later needs no change here, and a hand-maintained copy
+    # would drift silently.
+    #
+    # --formula, never --tap. Trusting the tap would also cover whatever is
+    # added to that tap in future; trusting the formula covers exactly what is
+    # declared. The Brewfile is the trust boundary, which is the point: a
+    # formula gets trusted here only by having been written into a file in the
+    # dotfiles repo, where the decision is reviewable and in git history.
+    if brew trust --help >/dev/null 2>&1; then
+      while read -r f; do
+        [[ -n "$f" ]] || continue
+        if brew trust --formula "$f" >/dev/null 2>&1; then
+          echo "    trusted $f"
+        else
+          warn "could not trust '$f' — run: brew trust --formula $f"
+        fi
+      done < <(grep -oE '^brew "[^"]+/[^"]+/[^"]+"' "$DOTFILES_DIR/Brewfile" \
+                 | sed 's/^brew "//; s/"$//')
+    fi
     say "brew bundle from dotfiles Brewfile"
     brew bundle --file="$DOTFILES_DIR/Brewfile" || warn "some brew formulae failed (non-fatal)"
   fi

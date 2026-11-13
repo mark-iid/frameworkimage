@@ -699,6 +699,14 @@ installs Homebrew + the Brewfile, SDKMAN + three JDKs, JetBrains Toolbox, the
 voice toolbox, sets zsh as the login shell, points VS Code and Obsidian at the
 keyring, and enables the user timers. Re-runnable.
 
+Homebrew 7 refuses to load a formula from a non-official tap until it is
+trusted, and that trust is per-machine state (`~/.homebrew/trust.json`) that a
+wipe destroys — so bootstrap runs `brew trust --formula` on each `owner/tap/name`
+line it finds in the Brewfile before bundling. Formula-scoped, never tap-wide,
+and derived from the file, so the Brewfile is the trust boundary. Without it the
+tapped formula fails inside `brew bundle`'s non-fatal warning and only turns up
+later as doctor reporting "in the Brewfile but not installed" (2026-11-13).
+
 - [ ] **Log out and back in afterwards — a new terminal window is not enough.**
       bootstrap `chsh`es the account to zsh, but the graphical session recorded
       `SHELL=/bin/bash` when it started, and terminal emulators spawn `$SHELL`.
