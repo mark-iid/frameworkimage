@@ -782,7 +782,7 @@ cd ~ && claude                 # then /login with the personal account
 ### 8. Verify before trusting it
 
 ```
-kb3lyb-doctor          # 12 declared-vs-actual checks; want "no drift found"
+kb3lyb-doctor          # 13 declared-vs-actual checks; want "no drift found"
 kb3lyb-backup-age      # want a recent successful backup
 kb3lyb-restore --list  # every group should read available
 ```
