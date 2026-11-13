@@ -734,6 +734,17 @@ kb3lyb-restore                     # keyring, mail, apps, notes, desktop, projec
       clone's working tree with the snapshot's.
 - [ ] ~20G moves in the full run (`apps` is 11G, `projects` 8.8G). Use `--only`
       on a slow link.
+- [ ] **Check that the restored keyring is the *default* collection**:
+      `cat ~/.local/share/keyrings/default` should say `login`. That file is
+      not in the backup — a working machine has none, and gnome-keyring then
+      treats `login` as the default — but a fresh install creates one the
+      moment anything stores a secret before the keyring group runs, and points
+      it at a keyring of its own. 2026-11-13: `login.keyring` restored,
+      unlocked, 29 items, and every new secret going to a 5-item "Default
+      Keyring" beside it. The only visible symptom was Slack logged out while
+      Discord came back fine, because Discord's token is in leveldb and never
+      asks the keyring. `kb3lyb-restore --only keyring` now repairs the pointer
+      and says so; it needs a log out and back in, plus one Slack sign-in.
 - [ ] **After `--only net`, check `nmcli connection show`** lists every profile,
       not just the one network this install joined by hand. Installing them is
       three `sudo` steps and a reload, and a failure in the middle leaves the
@@ -763,7 +774,7 @@ cd ~ && claude                 # then /login with the personal account
 ### 8. Verify before trusting it
 
 ```
-kb3lyb-doctor          # 11 declared-vs-actual checks; want "no drift found"
+kb3lyb-doctor          # 12 declared-vs-actual checks; want "no drift found"
 kb3lyb-backup-age      # want a recent successful backup
 kb3lyb-restore --list  # every group should read available
 ```
