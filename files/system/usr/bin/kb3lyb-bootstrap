@@ -59,14 +59,54 @@ if command -v stow >/dev/null; then
   # --no-folding, which would also unfold ~/.config/* and change where new
   # config files land.
   mkdir -p "$HOME/.local/bin"
+  # A conflicting regular file is MOVED ASIDE, not worked around. On a fresh
+  # install the first thing stow meets is Fedora's /etc/skel/.zshrc, copied into
+  # every new account by useradd, and stow refuses a package wholesale when any
+  # one of its targets is a real file. That took out the entire `zsh` package on
+  # 2026-11-13: ~/.zshrc stayed the skel default, so `brew shellenv` never ran,
+  # /home/linuxbrew/.linuxbrew/bin never reached PATH, and ~60 installed brew
+  # programs — aerc, nvim, tmux, starship, atuin, zellij — looked uninstalled.
+  # kb3lyb-doctor reported all of it, as nine separate "deadconfig" findings
+  # plus "brew not installed", none of which named the cause. Thunar's
+  # first-run uca.xml took out that package the same way.
+  #
+  # The refusal was warned about and nothing more, which is the wrong default
+  # here: the file in the way is a distro default or a program's first-run
+  # scratch copy, never something worth keeping over the tracked version. So
+  # collect the blockers from a dry run, move them under ~/.local/state/kb3lyb/
+  # pre-stow/ (a move, so nothing is lost and the path is printed), and retry
+  # once. --adopt would be the obvious shortcut and is exactly wrong: it pulls
+  # the skel file INTO the repo, overwriting the tracked .zshrc with Fedora's.
+  #
   # Stow each package by absolute --dir instead of cd'ing in: an unguarded `cd` that
   # silently failed would stow from the wrong cwd into $HOME. The */ glob skips .git.
+  prestow="$HOME/.local/state/kb3lyb/pre-stow"
   for pkg in "$DOTFILES_DIR"/*/; do
     pkg="$(basename "$pkg")"
     if stow --restow --dir="$DOTFILES_DIR" --target="$HOME" "$pkg" 2>&1; then
       echo "    stowed $pkg"
+      continue
+    fi
+    # Targets stow named as "neither a link nor a directory", i.e. real files.
+    # Anything else it refused over (a directory, a symlink elsewhere) is left
+    # alone and reported, because those are not the distro-default case.
+    mapfile -t blockers < <(
+      stow -n --restow --dir="$DOTFILES_DIR" --target="$HOME" "$pkg" 2>&1 \
+        | sed -n 's/.*over existing target \(.*\) since neither a link nor a directory.*/\1/p'
+    )
+    moved=0
+    for rel in "${blockers[@]}"; do
+      [[ -f "$HOME/$rel" && ! -L "$HOME/$rel" ]] || continue
+      mkdir -p "$prestow/$(dirname "$rel")"
+      if mv "$HOME/$rel" "$prestow/$rel"; then
+        echo "    moved aside ~/$rel -> $prestow/$rel"
+        moved=$((moved+1))
+      fi
+    done
+    if (( moved )) && stow --restow --dir="$DOTFILES_DIR" --target="$HOME" "$pkg" 2>&1; then
+      echo "    stowed $pkg (after moving $moved default(s) aside)"
     else
-      warn "stow refused '$pkg' — a real file is likely in the way (baked default placed too aggressively? See DESIGN §6)"
+      warn "stow refused '$pkg' — something other than a plain default file is in the way (See DESIGN §6)"
     fi
   done
 else
