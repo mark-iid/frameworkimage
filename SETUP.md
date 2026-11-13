@@ -278,6 +278,24 @@ so a failure is a rollback and not a reinstall.
       timedatectl | grep 'Time zone'      # expect: America/New_York (EDT/EST)
       ```
       If the waybar clock still shows UTC afterwards, restart waybar (not SIGUSR2).
+- [ ] **Hostname.** Anaconda leaves it `fedora`, and 2026-11-13 ran four hours
+      that way. Same polkit path as the timezone, no sudo:
+      ```
+      hostnamectl set-hostname frameworklaptop   # or kb3lyb on the shack PC
+      hostname -s                                # what the niri guards read
+      ```
+      **Do this before first login on the shack PC.** Every hostname guard
+      tests for `kb3lyb` and treats everything else as the laptop — see
+      `nextcloud-client.service` (`ConditionHost=!kb3lyb`) and the niri
+      `spawn-at-startup` and keybind guards. They are fail-open toward the
+      laptop, so a shack PC still named `fedora` passes them and starts the
+      Nextcloud sync client on the machine where Nextcloud must be a mount: an
+      88 GB tree onto a 238 GB disk that also holds two deployments. On the
+      laptop the wrong name is harmless by luck; there it is not.
+
+      Also note restic groups snapshots by host, so a renamed machine gets "no
+      parent snapshot found, will read all files" once and its snapshots keep
+      their own retention group.
 - [ ] **Give the login keyring a REAL password.** This reverses the old
       "passwordless keyring" step, which stored every Secret Service credential
       (Evolution M365 OAuth tokens, Nextcloud, VS Code) encrypted with the empty
@@ -782,7 +800,7 @@ cd ~ && claude                 # then /login with the personal account
 ### 8. Verify before trusting it
 
 ```
-kb3lyb-doctor          # 13 declared-vs-actual checks; want "no drift found"
+kb3lyb-doctor          # 14 declared-vs-actual checks; want "no drift found"
 kb3lyb-backup-age      # want a recent successful backup
 kb3lyb-restore --list  # every group should read available
 ```
