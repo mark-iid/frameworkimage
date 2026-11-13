@@ -699,8 +699,25 @@ installs Homebrew + the Brewfile, SDKMAN + three JDKs, JetBrains Toolbox, the
 voice toolbox, sets zsh as the login shell, points VS Code and Obsidian at the
 keyring, and enables the user timers. Re-runnable.
 
-- [ ] Open a new shell afterwards so PATH picks up `~/.local/bin` ahead of brew
-      — the Claude account wrapper depends on that ordering.
+- [ ] **Log out and back in afterwards — a new terminal window is not enough.**
+      bootstrap `chsh`es the account to zsh, but the graphical session recorded
+      `SHELL=/bin/bash` when it started, and terminal emulators spawn `$SHELL`.
+      So every window opened after bootstrap is still bash, which nothing here
+      configures: no brew, no `~/.local/bin` ahead of it, no starship prompt.
+      `exec zsh` fixes the window in front of you; only a fresh login fixes the
+      rest. Getting this wrong looks exactly like bootstrap having failed
+      (2026-11-13).
+- [ ] Then confirm PATH has `~/.local/bin` ahead of brew — the Claude account
+      wrapper depends on that ordering.
+- [ ] **Confirm the shell config is actually a symlink**: `ls -l ~/.zshrc`
+      should point into `~/dotfiles`. `useradd` copies Fedora's
+      `/etc/skel/.zshrc` into every new account, and stow refuses a package
+      wholesale when one target is a real file — on 2026-11-13 that silently
+      dropped the whole `zsh` package, so `brew shellenv` never ran, nothing
+      under `/home/linuxbrew` was on PATH, and ~60 installed brew programs
+      looked uninstalled. bootstrap now moves such a file to
+      `~/.local/state/kb3lyb/pre-stow/` and retries, printing both; `kb3lyb-doctor`
+      names the same thing as `stow: ~/.zshrc does not resolve into the dotfiles`.
 
 ### 6. Restore, in this order
 
@@ -717,6 +734,10 @@ kb3lyb-restore                     # keyring, mail, apps, notes, desktop, projec
       clone's working tree with the snapshot's.
 - [ ] ~20G moves in the full run (`apps` is 11G, `projects` 8.8G). Use `--only`
       on a slow link.
+- [ ] **After `--only net`, check `nmcli connection show`** lists every profile,
+      not just the one network this install joined by hand. Installing them is
+      three `sudo` steps and a reload, and a failure in the middle leaves the
+      files in `/etc` with nothing loaded from them.
 
 ### 7. The parts nothing can restore
 
