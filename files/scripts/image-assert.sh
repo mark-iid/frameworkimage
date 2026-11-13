@@ -215,6 +215,28 @@ assert "console font latarcyrheb-sun32 shipped" \
 # status glyph renders as tofu.
 assert "Symbols Nerd Font installed for waybar" \
   sh -c 'find /usr/share/fonts -iname "SymbolsNerdFont*" -print -quit | grep -q .'
+# The check above is not enough, and said so by example: it passed on every build
+# while the bar was solid tofu. The .ttf was present and valid the whole time —
+# fontconfig just never had it in a cache, so `fc-match "Symbols Nerd Font"`
+# answered "Noto Sans". Presence and findability are different properties, and
+# only the second one is what waybar needs.
+#
+# `fc-cache -v` WITHOUT --force reports per directory whether it had to build a
+# cache ("caching, new cache contents") or found a usable one ("existing cache is
+# valid"). The latter is exactly the postcondition font-cache.sh must leave
+# behind, and it is read from the verb, not from the state afterwards — this run
+# would itself create a missing cache, so a later probe would be useless.
+nerd_dir=/usr/share/fonts/nerd-fonts/NerdFontsSymbolsOnly
+if fc-cache --system-only --verbose 2>&1 |
+     grep -q "^$nerd_dir: skipping, existing cache is valid: [1-9]"; then
+  pass "Symbols Nerd Font is in fontconfig's system cache"
+else
+  fail "Symbols Nerd Font is not in fontconfig's cache (waybar renders tofu)"
+fi
+# And the contract itself: the family name style.css asks for has to resolve to
+# that family and not to a fallback face.
+assert "fontconfig resolves 'Symbols Nerd Font' to itself" \
+  sh -c '[ "$(fc-match --format="%{family}" "Symbols Nerd Font")" = "Symbols Nerd Font" ]'
 
 # --- Unit enablement ----------------------------------------------------------
 # `systemctl is-enabled` reads unit files and symlinks; it needs no running

@@ -698,6 +698,16 @@ modules:
       # Must come after every dnf module, which add and then withdraw their own
       # repo files in this directory.
       - iso-build-repos.sh
+      # Rebuild fontconfig's system cache so the fonts installed above are
+      # actually findable by family name. LAST of the scripts, because it has to
+      # follow every module that adds a font — the `fonts` module and the dnf
+      # font packages — and a cache built before them is the stale cache it
+      # exists to replace. Read the script header: shipping the .ttf is not
+      # enough, and on ostree (epoch mtimes, so nothing ever looks newer than
+      # the cache) a stale cache never self-heals. This is what was behind every
+      # waybar glyph rendering as tofu while the font sat in the image, valid and
+      # unfound.
+      - font-cache.sh
 
   # Display manager: base SDDM -> greetd. Plus tailscaled (§2) and the auto-update
   # timers (§5). Unit files for the flatpak/brew timers live in files/systemd/.
